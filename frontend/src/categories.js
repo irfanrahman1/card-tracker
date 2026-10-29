@@ -11,6 +11,10 @@ export const CATEGORIES = [
   { id: "other", label: "Other", icon: "📦" },
 ];
 
+// Whole dollars, for fees and yearly figures: "$895"
+export const dollars = (n) =>
+  Number(n).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+
 export const categoryLabel = (id) => CATEGORIES.find((c) => c.id === id)?.label ?? id;
 export const categoryColor = (id) => `var(--cat-${id})`;
 

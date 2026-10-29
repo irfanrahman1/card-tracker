@@ -1,0 +1,239 @@
+{
+  "_about": "Popular US cards and their reward rules, mapped onto Card Tracker's categories. Rates are points or % per dollar. 'cap' = yearly spend limit for that rate (then base rate). Terms change: each card lists when it was checked and where. Perks/credits are NOT counted here; users add the value they actually use.",
+  "checked": "2026-10",
+  "cards": [
+    {
+      "id": "amex-platinum",
+      "name": "Platinum Card",
+      "issuer": "American Express",
+      "reward_type": "points",
+      "points_name": "Membership Rewards",
+      "annual_fee": 895,
+      "base_rate": 1,
+      "rules": [
+        {
+          "category": "travel",
+          "rate": 5,
+          "note": "Flights booked directly with airlines or Amex Travel; prepaid hotels via Amex Travel only"
+        }
+      ],
+      "notes": "Value is mostly in credits and lounge access, which aren't counted unless you add them.",
+      "source": "https://www.fool.com/money/credit-cards/articles/how-the-american-express-platinum-card-can-pay-for-its-annual-fee-3-times-over-in-2026"
+    },
+    {
+      "id": "amex-gold",
+      "name": "Gold Card",
+      "issuer": "American Express",
+      "reward_type": "points",
+      "points_name": "Membership Rewards",
+      "annual_fee": 325,
+      "base_rate": 1,
+      "rules": [
+        {
+          "category": "food",
+          "rate": 4,
+          "cap": 50000,
+          "note": "Restaurants worldwide, up to $50k/yr"
+        },
+        {
+          "category": "groceries",
+          "rate": 4,
+          "cap": 25000,
+          "note": "U.S. supermarkets, up to $25k/yr"
+        },
+        {
+          "category": "travel",
+          "rate": 3,
+          "note": "Flights booked directly with airlines or Amex Travel"
+        }
+      ],
+      "source": "https://upgradedpoints.com/amex-gold-card-dining-and-groceries"
+    },
+    {
+      "id": "amex-blue-cash-preferred",
+      "name": "Blue Cash Preferred",
+      "issuer": "American Express",
+      "reward_type": "cash",
+      "annual_fee": 95,
+      "base_rate": 1,
+      "rules": [
+        {
+          "category": "groceries",
+          "rate": 6,
+          "cap": 6000,
+          "note": "U.S. supermarkets, up to $6k/yr"
+        },
+        {
+          "category": "subscriptions",
+          "rate": 6,
+          "note": "Select U.S. streaming services"
+        },
+        {
+          "category": "transportation",
+          "rate": 3,
+          "note": "Transit (rideshare, trains, buses, parking, tolls) and U.S. gas stations"
+        }
+      ],
+      "notes": "$0 annual fee the first year.",
+      "source": "https://www.nerdwallet.com/credit-cards/reviews/american-express-blue-cash-preferred"
+    },
+    {
+      "id": "amex-blue-cash-everyday",
+      "name": "Blue Cash Everyday",
+      "issuer": "American Express",
+      "reward_type": "cash",
+      "annual_fee": 0,
+      "base_rate": 1,
+      "rules": [
+        {
+          "category": "groceries",
+          "rate": 3,
+          "cap": 6000,
+          "note": "U.S. supermarkets, up to $6k/yr"
+        },
+        {
+          "category": "shopping",
+          "rate": 3,
+          "cap": 6000,
+          "note": "U.S. online retail, up to $6k/yr"
+        }
+      ],
+      "notes": "Also 3% at U.S. gas stations (up to $6k/yr); not counted because Transportation here is mostly transit.",
+      "source": "https://www.nerdwallet.com/credit-cards/reviews/american-express-blue-cash-everyday"
+    },
+    {
+      "id": "chase-sapphire-preferred",
+      "name": "Sapphire Preferred",
+      "issuer": "Chase",
+      "reward_type": "points",
+      "points_name": "Ultimate Rewards",
+      "annual_fee": 95,
+      "base_rate": 1,
+      "rules": [
+        {
+          "category": "food",
+          "rate": 3,
+          "note": "Dining"
+        },
+        {
+          "category": "subscriptions",
+          "rate": 3,
+          "note": "Select streaming services"
+        },
+        {
+          "category": "travel",
+          "rate": 2,
+          "note": "Other travel; 5x through Chase Travel, 3x vacation rentals booked direct"
+        }
+      ],
+      "notes": "June 2026 refresh added 3x on gas/EV charging and online groceries (not counted: they're only part of Transportation/Groceries).",
+      "source": "https://media.chase.com/news/Meet-the-New-Chase-Sapphire-Preferred"
+    },
+    {
+      "id": "chase-sapphire-reserve",
+      "name": "Sapphire Reserve",
+      "issuer": "Chase",
+      "reward_type": "points",
+      "points_name": "Ultimate Rewards",
+      "annual_fee": 795,
+      "base_rate": 1,
+      "rules": [
+        {
+          "category": "travel",
+          "rate": 4,
+          "note": "Flights and hotels booked directly; 8x through Chase Travel"
+        },
+        {
+          "category": "food",
+          "rate": 3,
+          "note": "Dining worldwide"
+        }
+      ],
+      "source": "https://thepointsguy.com/news/chase-sapphire-reserve-refresh-2025"
+    },
+    {
+      "id": "chase-freedom-unlimited",
+      "name": "Freedom Unlimited",
+      "issuer": "Chase",
+      "reward_type": "points",
+      "points_name": "Ultimate Rewards",
+      "annual_fee": 0,
+      "base_rate": 1.5,
+      "rules": [
+        {
+          "category": "food",
+          "rate": 3,
+          "note": "Dining, including takeout and delivery"
+        }
+      ],
+      "notes": "Also 3% at drugstores (not counted: drugstores are part of Shopping) and 5% through Chase Travel.",
+      "source": "https://thepointsparty.com/articles/chase-freedom-unlimited-review-2026"
+    },
+    {
+      "id": "capital-one-savor",
+      "name": "Savor",
+      "issuer": "Capital One",
+      "reward_type": "cash",
+      "annual_fee": 0,
+      "base_rate": 1,
+      "rules": [
+        {
+          "category": "food",
+          "rate": 3,
+          "note": "Dining"
+        },
+        {
+          "category": "groceries",
+          "rate": 3,
+          "note": "Grocery stores (not superstores like Walmart/Target)"
+        },
+        {
+          "category": "subscriptions",
+          "rate": 3,
+          "note": "Popular streaming services"
+        }
+      ],
+      "notes": "Also 3% on entertainment, and 5% on hotels/rental cars through Capital One Travel.",
+      "source": "https://www.nerdwallet.com/credit-cards/reviews/capital-one-savor"
+    },
+    {
+      "id": "capital-one-venture-x",
+      "name": "Venture X",
+      "issuer": "Capital One",
+      "reward_type": "points",
+      "points_name": "Capital One miles",
+      "annual_fee": 395,
+      "base_rate": 2,
+      "rules": [
+        {
+          "category": "travel",
+          "rate": 2,
+          "note": "10x hotels/rental cars and 5x flights through Capital One Travel"
+        }
+      ],
+      "notes": "$300 Capital One Travel credit and 10,000 anniversary miles each year aren't counted unless you add them.",
+      "source": "https://nerdwallet.com/credit-cards/reviews/capital-one-venture-x"
+    },
+    {
+      "id": "citi-double-cash",
+      "name": "Double Cash",
+      "issuer": "Citi",
+      "reward_type": "cash",
+      "annual_fee": 0,
+      "base_rate": 2,
+      "rules": [],
+      "notes": "1% when you buy + 1% when you pay.",
+      "source": "https://www.shopback.com/blog/finance/chase-freedom-unlimited-vs-citi-double-cash-vs-wells-fargo-active-cash-vs-capital-one-quicksilver-us-2026-flat-cashback"
+    },
+    {
+      "id": "wells-fargo-active-cash",
+      "name": "Active Cash",
+      "issuer": "Wells Fargo",
+      "reward_type": "cash",
+      "annual_fee": 0,
+      "base_rate": 2,
+      "rules": [],
+      "source": "https://www.shopback.com/blog/finance/chase-freedom-unlimited-vs-citi-double-cash-vs-wells-fargo-active-cash-vs-capital-one-quicksilver-us-2026-flat-cashback"
+    }
+  ]
+}

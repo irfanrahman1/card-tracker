@@ -9,6 +9,7 @@ from .categories import CATEGORIES
 class RewardRuleIn(BaseModel):
     category: str
     rate: float = Field(ge=0)
+    cap: float | None = Field(default=None, gt=0)  # yearly spend limit for this rate
 
     @field_validator("category")
     @classmethod
@@ -28,6 +29,11 @@ class CardIn(BaseModel):
     name: str = Field(min_length=1)
     issuer: str = ""
     base_rate: float = Field(default=1.0, ge=0)
+    reward_type: str = Field(default="cash", pattern="^(cash|points)$")
+    point_value: float = Field(default=1.0, gt=0, le=10)  # cents per point
+    annual_fee: float = Field(default=0.0, ge=0)
+    credits_value: float = Field(default=0.0, ge=0)  # yearly value of perks you use
+    catalog_id: str | None = None
     rules: list[RewardRuleIn] = []
 
 
@@ -37,7 +43,19 @@ class CardOut(BaseModel):
     name: str
     issuer: str
     base_rate: float
+    reward_type: str
+    point_value: float
+    annual_fee: float
+    credits_value: float
+    catalog_id: str | None
     rules: list[RewardRuleOut]
+
+
+class OptimizerIn(BaseModel):
+    """Optional what-if inputs. Leave spending out to use your real purchases."""
+
+    spending: dict[str, float] | None = None  # yearly $ per category
+    point_value: float = Field(default=1.0, gt=0, le=10)  # cents/point for catalog points cards
 
 
 class TransactionIn(BaseModel):

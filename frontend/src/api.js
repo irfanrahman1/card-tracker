@@ -30,6 +30,8 @@ export const api = {
   createCard: (card) => request("/api/cards", json("POST", card)),
   updateCard: (id, card) => request(`/api/cards/${id}`, json("PUT", card)),
   deleteCard: (id) => request(`/api/cards/${id}`, { method: "DELETE" }),
+  catalog: () => request("/api/cards/catalog"),
+  addFromCatalog: (catalogId) => request(`/api/cards/from-catalog/${catalogId}`, { method: "POST" }),
 
   // Purchases
   listTransactions: (month, category) => {
@@ -58,6 +60,9 @@ export const api = {
     if (merchant) params.set("merchant", merchant);
     return request(`/api/recommend?${params}`);
   },
+
+  // Wallet optimizer. Pass { spending, point_value } for a what-if, or nothing for your real data.
+  optimize: (whatIf = {}) => request("/api/optimizer", json("POST", whatIf)),
 
   // Demo
   loadDemo: () => request("/api/demo/load", { method: "POST" }),

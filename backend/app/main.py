@@ -7,7 +7,7 @@ from sqlalchemy import event
 
 from . import models  # noqa: F401  (imported so the tables are registered)
 from .categories import CATEGORIES
-from .database import Base, engine
+from .database import Base, add_missing_columns, engine
 from .routers import cards, demo, insights, transactions
 
 
@@ -19,6 +19,7 @@ def _enable_foreign_keys(dbapi_connection, _record):
 
 # Create tables on startup. Fine for a small app; switch to Alembic if the schema grows.
 Base.metadata.create_all(engine)
+add_missing_columns()  # upgrade databases created by older versions
 
 app = FastAPI(title="Card Tracker")
 

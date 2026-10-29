@@ -15,8 +15,17 @@ class Card(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(100))
     issuer: Mapped[str] = mapped_column(String(100), default="")
-    # Rewards are stored as a percent back (3.0 = 3% / 3x points per dollar).
+    # Rates are "per dollar": 3.0 = 3% cash back, or 3 points per dollar.
     base_rate: Mapped[float] = mapped_column(Float, default=1.0)
+    # "cash" (rate is a %) or "points" (rate is points per dollar).
+    reward_type: Mapped[str] = mapped_column(String(10), default="cash")
+    # What one point is worth to you, in cents. Cash back is always 1.0.
+    point_value: Mapped[float] = mapped_column(Float, default=1.0)
+    annual_fee: Mapped[float] = mapped_column(Float, default=0.0)
+    # Yearly value of perks/credits you actually use (e.g. $200 airline credit), in dollars.
+    credits_value: Mapped[float] = mapped_column(Float, default=0.0)
+    # Which catalog card this was created from, if any (see catalog/cards.json).
+    catalog_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     rules: Mapped[list["RewardRule"]] = relationship(
         back_populates="card", cascade="all, delete-orphan"
@@ -32,6 +41,8 @@ class RewardRule(Base):
     card_id: Mapped[int] = mapped_column(ForeignKey("cards.id", ondelete="CASCADE"))
     category: Mapped[str] = mapped_column(String(30))
     rate: Mapped[float] = mapped_column(Float)
+    # Yearly spend limit for this rate in dollars (then the base rate applies). None = no cap.
+    cap: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     card: Mapped[Card] = relationship(back_populates="rules")
 

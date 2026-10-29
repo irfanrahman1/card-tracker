@@ -15,6 +15,11 @@ by category, and get a "best card for this purchase" recommendation.
 | 2 | Monthly summary, recommendation, CSV upload, demo data | ✅ |
 | 3 | React frontend | ✅ |
 | 4 | Real bank CSVs, 8 categories, refunds, fix-a-category | ✅ |
+| 5 | Card catalog, point values, fees/perks, wallet optimizer, tests | ✅ |
+| 6 | Accounts (sign up / log in), Postgres | ⏳ |
+| 7 | Bank linking with Plaid (sandbox) | ⏳ |
+| 8 | Deploy: Docker, hosting, installable on phones | ⏳ |
+| 9 | CI, architecture docs, demo | ⏳ |
 
 ## Quick start (macOS)
 
@@ -43,6 +48,8 @@ card-tracker/
 │   └── purchases.csv     # example CSV to try the upload
 └── backend/
     ├── requirements.txt
+    ├── requirements-dev.txt  # test tools (pytest)
+    ├── tests/                # unit tests for rewards, optimizer, CSV parsing
     ├── .env.example          # sample settings; copy to .env (never committed)
     └── app/
         ├── main.py           # FastAPI app, CORS, routers
@@ -51,6 +58,9 @@ card-tracker/
         ├── schemas.py        # request/response validation
         ├── categories.py     # category list + keyword guessing (Amazon → shopping)
         ├── recommendation.py # "best card for this purchase" logic (no web/DB code)
+        ├── optimizer.py      # wallet optimizer: best cards for your yearly spending
+        ├── catalog/
+        │   └── cards.json    # popular cards + reward rules (data, not code)
         ├── ingest.py         # saves transactions from ANY source (shared clean-up)
         ├── sources/          # where transactions come from
         │   ├── base.py       # TransactionSource interface
@@ -75,6 +85,7 @@ card-tracker/
             ├── CategoryBars.jsx
             ├── TrendChart.jsx
             ├── BestCard.jsx      # "best card for this purchase"
+            ├── Optimizer.jsx     # yearly wallet value + cards to add
             ├── Purchases.jsx     # add purchase, CSV upload, purchase list
             └── Cards.jsx         # add/edit/delete cards and reward rules
 ```
@@ -131,6 +142,15 @@ npm run dev
 
 Open http://localhost:5173. The backend must be running too. If it isn't,
 the app shows a red "Can't reach the backend" banner.
+
+## Running tests
+
+```bash
+cd backend
+source venv/bin/activate
+pip install -r requirements-dev.txt
+python -m pytest
+```
 
 ## Concepts
 
@@ -190,11 +210,33 @@ Column names are matched loosely (any case):
 
 See `sample-data/purchases.csv` for a small example.
 
+## Card catalog and point values
+
+`backend/app/catalog/cards.json` lists popular US cards (Amex, Chase, Capital One,
+Citi, Wells Fargo) with their bonus categories, yearly caps and annual fees, each
+with the date its terms were checked and a source link. Pick one on the Cards tab
+and everything fills in. Terms change, so update the JSON when they do.
+
+Cards are compared by **value per dollar in cents**: rate × point value. 3% cash back is
+3¢/$; 4 points/$ at 1.25¢ per point is 5¢/$. Point value defaults to 1¢ (a safe,
+cash-like value) and you can change it per card.
+
+## Wallet optimizer (Optimize tab)
+
+`backend/app/optimizer.py` takes a year of spending per category (your last 12 months
+of purchases, scaled to a year, or numbers you type in) and:
+
+1. Assigns each dollar to the best card in your wallet, filling yearly caps first
+   (e.g. 6% on the first $6,000 of groceries, then the next best card).
+2. Subtracts annual fees and adds the yearly value of perks you said you use.
+3. Tries adding each catalog card and ranks them by how much they'd add per year after fees.
+4. Finds the best single card and the best two-card combination for your spending.
+
 ## Recommendation logic
 
 `backend/app/recommendation.py`: for a purchase's category, each card earns its
 rule for that category if it has one, otherwise its base rate. Cards are ranked by
-that rate; the top one is "best". If you give a merchant instead of a category,
+value per dollar (rate × point value); the top one is "best". If you give a merchant instead of a category,
 the category is guessed first (so Amazon → shopping).
 
 ## API
@@ -214,3 +256,6 @@ the category is guessed first (so Amazon → shopping).
 | GET | `/api/recommend?amount=50&category=food` | Best card (or use `merchant=Amazon` instead of `category`) |
 | POST | `/api/demo/load` | Add demo cards + ~90 sample purchases (safe to repeat) |
 | POST | `/api/demo/clear` | Delete all cards and purchases |
+| GET | `/api/cards/catalog` | Popular cards you can add in one click |
+| POST | `/api/cards/from-catalog/{catalog_id}` | Add a catalog card to your wallet |
+| POST | `/api/optimizer` | Yearly wallet value and best cards to add (optional what-if `spending`) |

@@ -42,6 +42,7 @@ PAYMENT = re.compile(
     re.IGNORECASE,
 )
 REFUND_TYPES = {"return", "refund", "credit", "adjustment"}
+PURCHASE_TYPES = {"sale", "purchase", "debit"}
 
 
 def _parse_date(text: str) -> date:
@@ -146,9 +147,12 @@ class CSVSource(TransactionSource):
                 continue
             parsed.append((line_no, when, raw, merchant, location, value, signed, label, kind, get("card")))
 
-        # Which sign means "purchase" in this file? Whichever most rows use.
-        unsigned = [p[5] for p in parsed if not p[6]]
-        purchases_negative = sum(v < 0 for v in unsigned) > sum(v > 0 for v in unsigned)
+        # Which sign means "purchase" in this file? Rows typed "Sale"/"Purchase" settle it
+        # (Chase, Apple Card); otherwise whichever sign most rows use.
+        unsigned = [p for p in parsed if not p[6]]
+        typed = [p[5] for p in unsigned if p[8] in PURCHASE_TYPES]
+        values = typed or [p[5] for p in unsigned]
+        purchases_negative = sum(v < 0 for v in values) > sum(v > 0 for v in values)
 
         results = []
         seen: dict[str, int] = {}  # counts identical rows so real repeats aren't dropped

@@ -6,10 +6,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .. import models
+from .. import models, schemas
 from ..categories import CATEGORIES, normalize_category
 from ..database import get_db
-from ..recommendation import best_card, rank_cards, rate_for
+from ..catalog import catalog_cards
+from ..optimizer import suggest
+from ..recommendation import best_card, point_value, rank_cards, rate_for
 
 router = APIRouter(prefix="/api", tags=["insights"])
 
@@ -45,11 +47,13 @@ def monthly_summary(month: str | None = None, db: Session = Depends(get_db)):
         # Card fees don't earn rewards, so they're left out.
         if t.card_id in cards_by_id and t.category != "fees":
             with_card += 1
-            rate, _ = rate_for(cards_by_id[t.card_id], t.category)
-            earned += t.amount * rate / 100
+            card = cards_by_id[t.card_id]
+            rate, _ = rate_for(card, t.category)
+            cents = rate * point_value(card)  # value per dollar, so points count fairly
+            earned += t.amount * cents / 100
             # A refund takes back what its own card earned, whatever the "best" card is.
-            best_rate = best_card(cards, t.category, t.amount).rate if t.amount > 0 else rate
-            possible += t.amount * best_rate / 100
+            best_cents = best_card(cards, t.category, t.amount).cents_per_dollar if t.amount > 0 else cents
+            possible += t.amount * best_cents / 100
 
     return {
         "month": month,
@@ -95,3 +99,66 @@ def recommend(
         "best": ranked[0] if ranked else None,
         "options": ranked,
     }
+
+
+# ---------- Wallet optimizer ----------
+
+def yearly_spending(db: Session) -> tuple[dict[str, float], int]:
+    """Your spending per category over the last 12 months with data, scaled to a year.
+
+    Returns (spending, months_of_data). With 3 months of data, totals are x4.
+    Refunds are netted in; a category that nets negative counts as $0.
+    """
+    rows = db.scalars(select(models.Transaction)).all()
+    months = sorted({t.date.strftime("%Y-%m") for t in rows}, reverse=True)[:12]
+    if not months:
+        return {c: 0.0 for c in CATEGORIES}, 0
+    totals = {c: 0.0 for c in CATEGORIES}
+    for t in rows:
+        if t.date.strftime("%Y-%m") in months:
+            totals[t.category] = totals.get(t.category, 0) + t.amount
+    scale = 12 / len(months)
+    return {c: round(max(v, 0) * scale, 2) for c, v in totals.items()}, len(months)
+
+
+def _owned_as_dicts(cards) -> list[dict]:
+    return [{
+        "key": card.catalog_id or f"own-{card.id}",
+        "id": card.id,
+        "name": card.name,
+        "base_rate": card.base_rate,
+        "point_value": point_value(card),
+        "annual_fee": card.annual_fee or 0.0,
+        "credits_value": card.credits_value or 0.0,
+        "rules": [{"category": r.category, "rate": r.rate, "cap": r.cap} for r in card.rules],
+        "owned": True,
+    } for card in cards]
+
+
+def _catalog_as_dicts(points_cents: float) -> list[dict]:
+    return [{
+        "key": spec["id"],
+        "name": f"{spec['issuer']} {spec['name']}",
+        "base_rate": spec["base_rate"],
+        "point_value": 1.0 if spec["reward_type"] == "cash" else points_cents,
+        "annual_fee": spec["annual_fee"],
+        "credits_value": 0.0,  # unknown: depends on which perks you'd use
+        "rules": spec["rules"],
+        "notes": spec.get("notes", ""),
+        "owned": False,
+    } for spec in catalog_cards()]
+
+
+@router.post("/optimizer")
+def optimize(payload: schemas.OptimizerIn | None = None, db: Session = Depends(get_db)):
+    """Yearly value of your cards, and which cards would add the most.
+
+    Uses your real spending (last 12 months, scaled to a year) unless you pass
+    `spending` to try a what-if. Catalog points cards are valued at `point_value` cents.
+    """
+    payload = payload or schemas.OptimizerIn()
+    real_spending, months = yearly_spending(db)
+    spending = {c: max(float(payload.spending.get(c, 0)), 0) for c in CATEGORIES} if payload.spending else real_spending
+    owned = _owned_as_dicts(db.scalars(select(models.Card)).all())
+    result = suggest(owned, _catalog_as_dicts(payload.point_value), spending)
+    return {"spending": spending, "months_of_data": months, "what_if": bool(payload.spending), **result}

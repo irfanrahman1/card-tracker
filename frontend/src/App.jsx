@@ -4,10 +4,12 @@ import Overview from "./components/Overview.jsx";
 import BestCard from "./components/BestCard.jsx";
 import Purchases from "./components/Purchases.jsx";
 import Cards from "./components/Cards.jsx";
+import Optimizer from "./components/Optimizer.jsx";
 
 const TABS = [
   { id: "overview", label: "Overview", icon: "📊" },
   { id: "best", label: "Best card", icon: "✨" },
+  { id: "optimize", label: "Optimize", icon: "🎯" },
   { id: "purchases", label: "Purchases", icon: "🧾" },
   { id: "cards", label: "Cards", icon: "💳" },
 ];
@@ -114,6 +116,7 @@ export default function App() {
       <main>
         {tab === "overview" && <Overview {...shared} />}
         {tab === "best" && <BestCard {...shared} />}
+        {tab === "optimize" && <Optimizer {...shared} />}
         {tab === "purchases" && <Purchases {...shared} />}
         {tab === "cards" && <Cards {...shared} />}
       </main>

@@ -25,3 +25,4 @@ dist/
 # Bank exports have personal data: never commit them
 *.csv
 !sample-data/*.csv
+.pytest_cache/
