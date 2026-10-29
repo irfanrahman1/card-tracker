@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
-import { CATEGORIES, categoryColor, categoryLabel, money, monthLabel, today } from "../categories.js";
+import { CATEGORIES, categoryColor, categoryLabel, money, monthLabel, prettyMerchant, today } from "../categories.js";
 
 const EMPTY_FORM = { date: today(), merchant: "", amount: "", category: "", card_id: "" };
 
@@ -58,8 +58,8 @@ export default function Purchases({ dataVersion, refresh, notify }) {
       const res = await api.updateTransaction(row.id, { category: newCategory });
       notify(
         res.updated > 1
-          ? `Moved ${res.updated} purchases at ${res.merchant} to ${categoryLabel(newCategory)}`
-          : `Moved ${res.merchant} to ${categoryLabel(newCategory)}`
+          ? `Moved ${res.updated} purchases at ${prettyMerchant(res.merchant)} to ${categoryLabel(newCategory)}`
+          : `Moved ${prettyMerchant(res.merchant)} to ${categoryLabel(newCategory)}`
       );
       refresh();
     } catch (err) {
@@ -154,7 +154,7 @@ export default function Purchases({ dataVersion, refresh, notify }) {
             {rows.map((r) => (
               <div className="list-row" key={r.id}>
                 <div className="row-main">
-                  <div className="row-title">{r.merchant}</div>
+                  <div className="row-title">{prettyMerchant(r.merchant)}</div>
                   <div className="row-meta">
                     <span>{new Date(r.date + "T00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
                     <span className="chip">

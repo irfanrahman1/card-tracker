@@ -147,8 +147,34 @@ h2 { font-size: 17px; font-weight: 650; }
 .stat-sub.good { color: var(--good); }
 
 /* ---------- Category bars ---------- */
-.cat-rows { display: flex; flex-direction: column; gap: 14px; }
-.cat-row { display: grid; grid-template-columns: 130px 1fr 130px; align-items: center; gap: 10px; }
+.cat-rows { display: flex; flex-direction: column; gap: 4px; }
+.cat-row {
+  display: grid; grid-template-columns: 130px 1fr 150px; align-items: center; gap: 10px;
+  width: 100%; border: 0; background: transparent; padding: 8px 6px; border-radius: 8px;
+  cursor: pointer; text-align: left;
+}
+.cat-row:hover:not(:disabled) { background: var(--surface-2); }
+.cat-row:disabled { cursor: default; opacity: 0.6; }
+.cat-item.open { background: var(--surface-2); border-radius: 10px; }
+.chevron { display: inline-block; width: 14px; margin-left: 6px; color: var(--muted); }
+.cat-detail { padding: 2px 8px 10px; display: flex; flex-direction: column; }
+.store { border-top: 1px solid var(--border); }
+.store-row {
+  display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; width: 100%;
+  border: 0; background: transparent; padding: 9px 2px; cursor: pointer; text-align: left;
+}
+.store-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.store-total { font-weight: 650; min-width: 76px; text-align: right; }
+.store-items { list-style: none; margin: 0 0 8px; padding: 0 0 0 12px; border-left: 2px solid var(--border); }
+.store-items li { display: grid; grid-template-columns: 64px 1fr auto; gap: 8px; padding: 4px 2px; font-size: 14px; }
+.setup { display: flex; flex-direction: column; gap: 10px; }
+.setup-step { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.setup-num {
+  width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 13px;
+  font-weight: 700; background: var(--surface-2); flex: none;
+}
+.setup-step.done .setup-num { background: var(--good-bg); color: var(--good); }
+.setup-step.done .setup-text { color: var(--muted); text-decoration: line-through; }
 .cat-name { display: flex; align-items: center; gap: 8px; font-weight: 550; }
 .swatch { width: 10px; height: 10px; border-radius: 3px; flex: none; }
 .bar-track { height: 10px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
@@ -261,6 +287,9 @@ h2 { font-size: 17px; font-weight: 650; }
   .form-grid { grid-template-columns: 1fr; }
   /* Category rows stack on phones: name + amount on top, bar underneath. */
   .cat-row { grid-template-columns: 1fr auto; grid-template-areas: "name amount" "bar bar"; gap: 6px 8px; }
+  .store-row { grid-template-columns: 1fr auto; }
+  .store-row .muted { grid-column: 1; grid-row: 2; }
+  .store-total { grid-row: 1 / span 2; grid-column: 2; }
   .cat-name { grid-area: name; }
   .cat-amount { grid-area: amount; }
   .bar-track { grid-area: bar; }

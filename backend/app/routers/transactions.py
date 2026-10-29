@@ -58,6 +58,24 @@ async def upload_csv(
     return {"imported": len(created), "skipped": source.skipped}
 
 
+@router.post("/assign-card")
+def assign_card(payload: schemas.AssignCardIn, db: Session = Depends(get_db)):
+    """Link purchases to a card in one go (by default only ones with no card yet).
+
+    Saves re-uploading a CSV just because the card wasn't picked the first time.
+    """
+    if not db.get(models.Card, payload.card_id):
+        raise HTTPException(400, "Unknown card_id")
+    query = select(models.Transaction)
+    if payload.only_without_card:
+        query = query.where(models.Transaction.card_id.is_(None))
+    rows = db.scalars(query).all()
+    for row in rows:
+        row.card_id = payload.card_id
+    db.commit()
+    return {"updated": len(rows)}
+
+
 @router.patch("/{transaction_id}")
 def update_transaction(transaction_id: int, payload: schemas.TransactionUpdate, db: Session = Depends(get_db)):
     """Change a purchase's category and/or card.

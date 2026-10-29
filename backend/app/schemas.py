@@ -111,3 +111,8 @@ class TransactionUpdate(BaseModel):
         if value not in CATEGORIES:
             raise ValueError(f"category must be one of {CATEGORIES}")
         return value
+
+
+class AssignCardIn(BaseModel):
+    card_id: int
+    only_without_card: bool = True  # leave purchases that already have a card alone

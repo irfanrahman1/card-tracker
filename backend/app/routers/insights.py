@@ -62,6 +62,9 @@ def monthly_summary(month: str | None = None, db: Session = Depends(get_db)):
         "count": count,  # purchases (refunds not counted)
         "refunds": round(refunds, 2),  # total refunds/credits this month
         "with_card": with_card,  # purchases linked to one of your cards
+        # Across all months: purchases with no card (rewards can't be counted for them).
+        "without_card_total": sum(1 for t in transactions if t.card_id not in cards_by_id),
+        "card_count": len(cards),
         "by_category": {c: round(v, 2) for c, v in by_category.items()},
         "rewards_earned": round(earned, 2),
         "rewards_possible": round(possible, 2),

@@ -40,6 +40,8 @@ export const api = {
     if (category) params.set("category", category);
     return request(`/api/transactions?${params}`);
   },
+  // Link purchases with no card to this card.
+  assignCard: (cardId) => request("/api/transactions/assign-card", json("POST", { card_id: cardId })),
   // Change a purchase's category (also fixes that merchant's other purchases).
   updateTransaction: (id, changes) => request(`/api/transactions/${id}`, json("PATCH", changes)),
   addTransaction: (tx) => request("/api/transactions", json("POST", tx)),

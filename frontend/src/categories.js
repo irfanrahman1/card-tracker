@@ -37,3 +37,15 @@ export const today = () => {
   const d = new Date();
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 };
+
+// Bank exports shout: "OZBEK HALAL F" -> "Ozbek Halal F". Mixed-case names are left alone.
+export const prettyMerchant = (name = "") => {
+  if (name !== name.toUpperCase()) return name;
+  return name
+    .toLowerCase()
+    .replace(/(^|[\s\-/&(])([a-z])/g, (m, sep, ch) => sep + ch.toUpperCase())
+    .replace(/\b(Llc|Inc|Usa|Nyc|Ny|Nj|Ca|Ma|Pa|Wa|De|Mta|Nyct|Omny|Path|Cvs|Bp)\b/g, (w) => w.toUpperCase());
+};
+
+export const shortDate = (iso) =>
+  new Date(iso + "T00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
