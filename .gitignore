@@ -1,0 +1,27 @@
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Secrets / local config (never commit these)
+.env
+.env.*
+!.env.example
+
+# Local database
+*.db
+*.sqlite3
+
+# Node / frontend
+node_modules/
+dist/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Bank exports have personal data: never commit them
+*.csv
+!sample-data/*.csv

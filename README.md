@@ -1,0 +1,216 @@
+# Card Tracker
+
+Track credit cards and their reward rules, log purchases, see monthly spending
+by category, and get a "best card for this purchase" recommendation.
+
+- **Backend:** FastAPI + SQLite (via SQLAlchemy)
+- **Frontend:** React + Vite (mobile-responsive; tabs become a bottom bar on phones)
+- No auth, no Plaid (yet). The code is structured so Plaid can be added as another transaction source.
+
+## Build status
+
+| Stage | What | Status |
+|---|---|---|
+| 1 | Backend core: cards + reward rules, manual purchases, categories, swappable sources | ✅ |
+| 2 | Monthly summary, recommendation, CSV upload, demo data | ✅ |
+| 3 | React frontend | ✅ |
+| 4 | Real bank CSVs, 8 categories, refunds, fix-a-category | ✅ |
+
+## Quick start (macOS)
+
+Requires Python 3.10+ and Node.js 18+ (`brew install node` if `node --version` fails).
+
+```bash
+cd card-tracker
+./start.sh
+```
+
+Then open **http://localhost:5173** and click **⚡ Load demo data**.
+The first run installs everything (about a minute); later runs start in seconds.
+Press **Ctrl+C** to stop.
+
+**On your phone:** with the app running and your phone on the same Wi-Fi, open the
+`Network:` address `start.sh` prints (like `http://192.168.1.20:5173`).
+
+## Project layout
+
+```
+card-tracker/
+├── .gitignore
+├── README.md
+├── start.sh              # one command: installs + starts backend and frontend
+├── sample-data/
+│   └── purchases.csv     # example CSV to try the upload
+└── backend/
+    ├── requirements.txt
+    ├── .env.example          # sample settings; copy to .env (never committed)
+    └── app/
+        ├── main.py           # FastAPI app, CORS, routers
+        ├── database.py       # SQLite engine + session
+        ├── models.py         # tables: cards, reward_rules, transactions
+        ├── schemas.py        # request/response validation
+        ├── categories.py     # category list + keyword guessing (Amazon → shopping)
+        ├── recommendation.py # "best card for this purchase" logic (no web/DB code)
+        ├── ingest.py         # saves transactions from ANY source (shared clean-up)
+        ├── sources/          # where transactions come from
+        │   ├── base.py       # TransactionSource interface
+        │   ├── manual.py     # manual entry
+        │   ├── csv_source.py # CSV upload
+        │   └── demo.py       # demo cards + sample purchases
+        └── routers/
+            ├── cards.py
+            ├── transactions.py   # incl. CSV upload
+            ├── insights.py       # monthly summary + recommendation
+            └── demo.py           # load demo data / clear all
+└── frontend/
+    ├── package.json
+    ├── vite.config.js        # dev server; forwards /api to the backend
+    └── src/
+        ├── App.jsx           # header, tabs, toasts, backend status
+        ├── api.js            # every backend call in one place
+        ├── categories.js     # category labels/colors + formatting helpers
+        ├── styles.css        # all styling (light + dark mode, mobile layout)
+        └── components/
+            ├── Overview.jsx      # month totals, category bars, trend chart
+            ├── CategoryBars.jsx
+            ├── TrendChart.jsx
+            ├── BestCard.jsx      # "best card for this purchase"
+            ├── Purchases.jsx     # add purchase, CSV upload, purchase list
+            └── Cards.jsx         # add/edit/delete cards and reward rules
+```
+
+## Manual setup (if you'd rather not use start.sh)
+
+### Backend
+
+Requires Python 3.10+. Check with `python3 --version`.
+
+**macOS:** the `python3` from Apple's Command Line Tools is often 3.9, which is
+too old. Install a newer one with [Homebrew](https://brew.sh):
+
+```bash
+brew install python@3.12
+```
+
+Then use `python3.12` in place of `python3` when creating the venv below. Once
+the venv is activated, plain `python`/`pip` point at the right version.
+(Stage 3 will also need Node.js: `brew install node`.)
+
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+The API runs at http://localhost:8000. **http://localhost:8000/docs** is an auto-generated page for testing the API by hand
+(it's for developers; the real app is at http://localhost:5173).
+
+The SQLite database is created automatically as `backend/card_tracker.db`
+(ignored by git). Delete that file to start fresh.
+
+### Optional settings
+
+Defaults work out of the box. To override them, copy `.env.example` to `.env`
+and start the server with:
+
+```bash
+uvicorn app.main:app --reload --env-file .env
+```
+
+`.env` is in `.gitignore`. Don't commit keys or secrets.
+
+### Frontend (in a second terminal)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open http://localhost:5173. The backend must be running too. If it isn't,
+the app shows a red "Can't reach the backend" banner.
+
+## Concepts
+
+**Categories:** `food`, `transportation`, `groceries`, `shopping`, `travel`,
+`subscriptions`, `fees` (card fees), `other`. Each purchase's category is chosen in this order:
+
+1. Anything from **Amazon always counts as shopping**.
+2. A category you picked for that merchant in the app (remembered, see below).
+3. The bank's own category label, if the CSV has one (e.g. Chase "Food & Drink").
+4. Keywords in the merchant name: "halal", "OMNY", "Booking.com", `TST*` (restaurant terminals)…
+5. Otherwise `other`.
+
+All of this lives in `backend/app/categories.py`. Add keywords there for stores it misses.
+
+**Fixing a category:** on the Purchases tab, click a purchase's category and pick
+another. Every purchase from that merchant moves too, and future uploads use your choice.
+
+**Refunds and credits** (Amazon returns, Amex statement credits) are stored as negative
+amounts, so they subtract from their category. **Card payments** ("AUTOPAY PAYMENT - THANK YOU")
+are skipped. They're you paying the bill, not spending.
+
+**Reward rules:** each card has a `base_rate` (percent back on everything)
+plus optional per-category rules, e.g. `groceries: 4` means 4% (or 4x points).
+
+**Transaction sources:** every input (manual form, CSV, demo data, later Plaid)
+is a `TransactionSource` with one method, `fetch()`, that returns purchases.
+`ingest.save_from_source()` does the shared work: normalizing categories,
+dropping unknown card ids, and skipping duplicates via `external_id`.
+
+### Adding Plaid later
+
+1. Add `plaid-python` to `requirements.txt`; put `PLAID_CLIENT_ID` / `PLAID_SECRET` in `.env` (never in code).
+2. Create `app/sources/plaid.py` with a `PlaidSource(TransactionSource)` whose
+   `fetch()` calls Plaid's `/transactions/sync` and maps each result to
+   `TransactionIn` (use Plaid's `transaction_id` as `external_id` so re-syncs don't duplicate).
+3. Add a route that calls `save_from_source(db, PlaidSource(...))`.
+
+## CSV format
+
+Upload your card's export as-is. Tested with American Express; also handles the
+column layouts of Chase, Capital One, Discover, Citi, Apple Card and Bank of America.
+Uploading overlapping exports (e.g. last month and this month) doesn't create duplicates.
+
+**Getting the file:** log in to your card's website → Activity/Transactions → Download → CSV.
+Then on the Purchases tab, pick that card in "Card for rows that don't name one" and upload.
+
+Column names are matched loosely (any case):
+
+| Field | Accepted headers | Required |
+|---|---|---|
+| date | `date`, `transaction date`, `posted date`… | yes (`2026-10-03`, `10/03/2026`, …) |
+| merchant | `merchant`, `name`, `payee`, `description` | yes |
+| amount | `amount`, or separate `debit` / `credit` columns | yes. Whichever sign most rows use counts as a purchase; the other sign is a refund |
+| category | `category` | no, guessed if blank |
+| type | `type` | no (`Payment` rows are skipped, `Return` rows count as refunds) |
+| card | `card`, `card name` | no, matched to your card names |
+
+See `sample-data/purchases.csv` for a small example.
+
+## Recommendation logic
+
+`backend/app/recommendation.py`: for a purchase's category, each card earns its
+rule for that category if it has one, otherwise its base rate. Cards are ranked by
+that rate; the top one is "best". If you give a merchant instead of a category,
+the category is guessed first (so Amazon → shopping).
+
+## API
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/categories` | List categories |
+| GET / POST | `/api/cards` | List / add cards (with `rules`) |
+| PUT / DELETE | `/api/cards/{id}` | Edit / remove a card |
+| GET | `/api/transactions?month=YYYY-MM&category=food` | List purchases (both filters optional) |
+| PATCH | `/api/transactions/{id}` | Change category (also that merchant's other purchases + remembered) or card |
+| POST | `/api/transactions` | Add a purchase manually |
+| DELETE | `/api/transactions/{id}` | Remove a purchase |
+| POST | `/api/transactions/upload` | Import a CSV (form fields: `file`, optional `card_id`) |
+| GET | `/api/summary?month=YYYY-MM` | Spending by category for a month (defaults to latest) + rewards earned vs. best possible |
+| GET | `/api/summary/trend` | Spending by category for every month |
+| GET | `/api/recommend?amount=50&category=food` | Best card (or use `merchant=Amazon` instead of `category`) |
+| POST | `/api/demo/load` | Add demo cards + ~90 sample purchases (safe to repeat) |
+| POST | `/api/demo/clear` | Delete all cards and purchases |

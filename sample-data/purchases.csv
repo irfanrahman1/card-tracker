@@ -1,0 +1,12 @@
+date,merchant,amount,category,card
+2026-10-01,Whole Foods Market,64.12,groceries,Dining Rewards Card
+2026-10-02,Amazon.com,29.99,,Online Shopping Card
+10/03/2026,Shell Gas,$45.00,,Commuter Card
+2026-10-04,Sweetgreen,14.50,dining,
+2026-10-05,AUTOPAY PAYMENT - THANK YOU,-500.00,,
+2026-10-06,Uber,18.40,,Everyday 2% Card
+2026-10-07,Amazon.com refund,-12.00,,Online Shopping Card
+2026-10-08,Booking.com Hotel,210.00,,Travel Rewards Card
+2026-10-09,Netflix,15.49,,
+2026-10-10,Bookstore,22.00,,
+not-a-date,Mystery,10.00,,
