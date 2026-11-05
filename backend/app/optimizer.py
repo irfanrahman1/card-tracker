@@ -7,32 +7,53 @@ to $25k/yr"), then subtracts annual fees and adds the value of perks you use.
 Plain Python with no web or database code, like recommendation.py. Cards are
 plain dicts here so catalog cards and your own cards are handled the same way:
     {"key", "name", "base_rate", "point_value", "annual_fee", "credits_value",
-     "rules": [{"category", "rate", "cap"}]}
+     "rules": [{"category", "rate", "cap", "cap_group", "portion", "valid_until"}]}
+
+Rule extras (all optional):
+  cap        yearly spend limit for the rate
+  cap_group  rules on a card with the same group share one cap
+  portion    share of the year the rate applies (0.25 = a rotating quarterly category)
+  valid_until  rules that have ended are ignored
 """
 from itertools import combinations
+
+from .recommendation import is_active
 
 # Fees aren't rewarded spending, so they're left out of the optimization.
 SKIP_CATEGORIES = {"fees"}
 
 
 def _value_options(cards: list[dict], category: str) -> list[dict]:
-    """Every way to earn in this category: each card's bonus rate (maybe capped)
-    and its uncapped base rate, as cents per dollar. Best first."""
+    """Every way to earn in this category: each card's active bonus rules (maybe
+    capped or part-year) and its uncapped base rate, as cents per dollar. Best first."""
     options = []
     for card in cards:
-        options.append({"card": card, "cents": card["base_rate"] * card["point_value"], "cap": None})
-        for rule in card["rules"]:
-            if rule["category"] == category and rule["rate"] > card["base_rate"]:
-                options.append({"card": card, "cents": rule["rate"] * card["point_value"], "cap": rule.get("cap")})
+        options.append({"card": card, "cents": card["base_rate"] * card["point_value"],
+                        "cap": None, "cap_key": None, "portion": 1.0})
+        for i, rule in enumerate(card["rules"]):
+            if rule["category"] != category or rule["rate"] <= card["base_rate"] or not is_active(_Rule(rule)):
+                continue
+            cap_key = (card["key"], rule.get("cap_group") or f"rule-{i}")
+            options.append({"card": card, "cents": rule["rate"] * card["point_value"], "cap": rule.get("cap"),
+                            "cap_key": cap_key, "portion": rule.get("portion") or 1.0})
     return sorted(options, key=lambda o: -o["cents"])
+
+
+class _Rule:
+    """Lets is_active() read a plain dict rule like a database row."""
+
+    def __init__(self, rule: dict):
+        self.valid_until = rule.get("valid_until")
 
 
 def allocate(cards: list[dict], spending: dict[str, float]) -> dict:
     """Assign each category's spending to the best card(s), filling caps greedily.
 
-    Greedy is optimal here: within one category, every dollar should go to the
-    highest-value option that still has room under its cap.
+    Within one category every dollar goes to the highest-value option with room
+    left. Shared caps (cap_group) are used up across categories in the order the
+    categories are processed, which is a close, simple approximation.
     """
+    cap_left: dict = {}  # (card, group) -> dollars of capped spending still available
     per_category = {}
     total = 0.0
     for category, spend in spending.items():
@@ -42,13 +63,19 @@ def allocate(cards: list[dict], spending: dict[str, float]) -> dict:
         for option in _value_options(cards, category):
             if remaining <= 0:
                 break
-            portion = remaining if option["cap"] is None else min(remaining, option["cap"])
-            if portion <= 0:
+            # A part-year rate (rotating quarterly 5%) only covers that share of the spending.
+            limit = remaining if option["portion"] >= 1 else min(remaining, spend * option["portion"])
+            if option["cap"] is not None:
+                left = cap_left.setdefault(option["cap_key"], option["cap"])
+                limit = min(limit, left)
+            if limit <= 0:
                 continue
-            rewards += portion * option["cents"] / 100
-            used.append({"card": option["card"]["name"], "spend": round(portion, 2),
+            if option["cap"] is not None:
+                cap_left[option["cap_key"]] -= limit
+            rewards += limit * option["cents"] / 100
+            used.append({"card": option["card"]["name"], "spend": round(limit, 2),
                          "cents_per_dollar": round(option["cents"], 3)})
-            remaining -= portion
+            remaining -= limit
         per_category[category] = {"spend": round(spend, 2), "rewards": round(rewards, 2), "cards": used}
         total += rewards
     return {"rewards": total, "per_category": per_category}

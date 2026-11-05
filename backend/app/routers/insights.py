@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..categories import CATEGORIES, normalize_category
 from ..database import get_db
-from ..catalog import catalog_cards
+from ..catalog import catalog_cards, display_name
 from ..optimizer import suggest
 from ..recommendation import best_card, point_value, rank_cards, rate_for
 
@@ -133,20 +133,34 @@ def _owned_as_dicts(cards) -> list[dict]:
         "point_value": point_value(card),
         "annual_fee": card.annual_fee or 0.0,
         "credits_value": card.credits_value or 0.0,
-        "rules": [{"category": r.category, "rate": r.rate, "cap": r.cap} for r in card.rules],
+        "rules": [{"category": r.category, "rate": r.rate, "cap": r.cap, "cap_group": r.cap_group,
+                   "portion": r.portion or 1.0, "valid_until": r.valid_until} for r in card.rules],
         "owned": True,
     } for card in cards]
 
 
-def _catalog_as_dicts(points_cents: float) -> list[dict]:
+def _choice_rule(spec: dict, spending: dict[str, float]) -> list[dict]:
+    """For a choose-your-category card, the pick that suits this spending best."""
+    choice = spec.get("choice")
+    if not choice:
+        return []
+    pick = max(choice["options"], key=lambda c: spending.get(c, 0))
+    rule = {k: v for k, v in choice.items() if k not in ("options", "default", "label")}
+    return [{**rule, "category": pick}]
+
+
+def _catalog_as_dicts(points_cents: float, spending: dict[str, float]) -> list[dict]:
     return [{
         "key": spec["id"],
-        "name": f"{spec['issuer']} {spec['name']}",
+        "name": display_name(spec)
+                + (f" ({spec['choice']['rate']:g}% on {_choice_rule(spec, spending)[0]['category']})" if spec.get("choice") else ""),
         "base_rate": spec["base_rate"],
         "point_value": 1.0 if spec["reward_type"] == "cash" else points_cents,
         "annual_fee": spec["annual_fee"],
         "credits_value": 0.0,  # unknown: depends on which perks you'd use
-        "rules": spec["rules"],
+        # A choose-your-category card is judged with the pick that suits you best.
+        "rules": spec["rules"] + _choice_rule(spec, spending),
+        "choice": _choice_rule(spec, spending)[0]["category"] if spec.get("choice") else None,
         "notes": spec.get("notes", ""),
         "owned": False,
     } for spec in catalog_cards()]
@@ -163,5 +177,5 @@ def optimize(payload: schemas.OptimizerIn | None = None, db: Session = Depends(g
     real_spending, months = yearly_spending(db)
     spending = {c: max(float(payload.spending.get(c, 0)), 0) for c in CATEGORIES} if payload.spending else real_spending
     owned = _owned_as_dicts(db.scalars(select(models.Card)).all())
-    result = suggest(owned, _catalog_as_dicts(payload.point_value), spending)
+    result = suggest(owned, _catalog_as_dicts(payload.point_value, spending), spending)
     return {"spending": spending, "months_of_data": months, "what_if": bool(payload.spending), **result}

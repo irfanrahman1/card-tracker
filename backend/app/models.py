@@ -43,6 +43,14 @@ class RewardRule(Base):
     rate: Mapped[float] = mapped_column(Float)
     # Yearly spend limit for this rate in dollars (then the base rate applies). None = no cap.
     cap: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Rules with the same cap_group on a card share one cap (e.g. BofA's $2,500/quarter
+    # across your 3% choice and 2% groceries). None = the cap is this rule's own.
+    cap_group: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    # Share of a year's spending this rate can apply to. 0.25 = one quarter, for
+    # rotating 5% categories like Discover's. 1.0 = all year.
+    portion: Mapped[float] = mapped_column(Float, default=1.0)
+    # Last day the rate applies, as "YYYY-MM-DD" (rotating categories end each quarter).
+    valid_until: Mapped[str | None] = mapped_column(String(10), nullable=True)
 
     card: Mapped[Card] = relationship(back_populates="rules")
 

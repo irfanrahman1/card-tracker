@@ -31,3 +31,13 @@ def test_points_are_compared_by_value_not_raw_rate():
 
 def test_no_cards_means_no_recommendation():
     assert best_card([], "food", 10) is None
+
+
+def test_best_active_rule_wins_and_expired_rules_are_skipped():
+    from datetime import date
+    flex = card(1, "Flex", 1, [("food", 3), ("food", 7)])
+    flex.rules[1].valid_until = "2026-12-31"
+    assert best_card([flex], "food", 100).rate == 7
+    assert rank_cards([flex], "food", 100)[0].rate == 7
+    from app.recommendation import rate_for
+    assert rate_for(flex, "food", today=date(2027, 1, 1))[0] == 3

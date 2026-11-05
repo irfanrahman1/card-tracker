@@ -10,6 +10,9 @@ class RewardRuleIn(BaseModel):
     category: str
     rate: float = Field(ge=0)
     cap: float | None = Field(default=None, gt=0)  # yearly spend limit for this rate
+    cap_group: str | None = None  # rules sharing a cap on one card
+    portion: float = Field(default=1.0, gt=0, le=1)  # share of the year the rate applies
+    valid_until: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")  # last day it applies
 
     @field_validator("category")
     @classmethod

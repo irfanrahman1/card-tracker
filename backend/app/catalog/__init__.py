@@ -22,3 +22,8 @@ def catalog_cards() -> list[dict]:
 
 def find_card(catalog_id: str) -> dict | None:
     return next((c for c in catalog_cards() if c["id"] == catalog_id), None)
+
+
+def display_name(spec: dict) -> str:
+    """"American Express Gold Card", but "Apple Card" (not "Apple Apple Card")."""
+    return spec["name"] if spec["name"].startswith(spec["issuer"]) else f"{spec['issuer']} {spec['name']}"

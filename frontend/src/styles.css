@@ -343,3 +343,7 @@ h2 { font-size: 17px; font-weight: 650; }
 .spend-grid { display: grid; gap: 12px; grid-template-columns: repeat(4, 1fr); }
 .link { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; }
 @media (max-width: 760px) { .spend-grid { grid-template-columns: 1fr 1fr; } }
+
+.choice-picker { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 12px; }
+.choice-picker .select { width: auto; }
+.cc-rate.ended { opacity: 0.5; text-decoration: line-through; }

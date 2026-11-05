@@ -33,3 +33,30 @@ def test_suggests_the_card_that_adds_the_most_and_skips_owned_cards():
     result = suggest(owned, catalog, {"food": 5000, "other": 1000})
     assert [a["card"]["key"] for a in result["add"]] == ["dining"]  # gain: 5000 * (4% - 2%) = $100
     assert result["add"][0]["gain"] == 100.00
+
+
+def rule(category, rate, cap=None, **extra):
+    return dict(category=category, rate=rate, cap=cap, **extra)
+
+
+def test_rotating_quarterly_rate_only_covers_a_quarter_of_the_year():
+    discover = card("discover", 1)
+    discover["rules"] = [rule("food", 5, 1500, portion=0.25, valid_until="2999-12-31")]
+    result = allocate([discover], {"food": 4000})
+    # $1,000 (a quarter) at 5% = $50, the other $3,000 at 1% = $30
+    assert round(result["rewards"], 2) == 80.00
+
+
+def test_shared_cap_is_used_up_across_categories():
+    bofa = card("bofa", 1)
+    bofa["rules"] = [rule("food", 3, 1000, cap_group="combined"), rule("groceries", 2, 1000, cap_group="combined")]
+    result = allocate([bofa], {"food": 800, "groceries": 800})
+    # food takes $800 of the $1,000 cap at 3% ($24); groceries gets the last $200 at 2% ($4)
+    # and $600 at 1% ($6)
+    assert round(result["rewards"], 2) == 34.00
+
+
+def test_expired_rules_are_ignored():
+    old = card("old", 1)
+    old["rules"] = [rule("food", 5, valid_until="2000-03-31")]
+    assert allocate([old], {"food": 100})["rewards"] == 1.00

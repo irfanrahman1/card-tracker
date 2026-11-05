@@ -10,6 +10,7 @@ Cards are compared by *value per dollar* in cents: rate x point value.
 So a points card and a cash card can be compared fairly.
 """
 from dataclasses import dataclass
+from datetime import date
 
 
 @dataclass
@@ -29,16 +30,24 @@ def point_value(card) -> float:
     return getattr(card, "point_value", 1.0) or 1.0
 
 
-def rate_for(card, category: str) -> tuple[float, str]:
-    """Return (rate, reason) for one card in one category (ignores yearly caps).
+def is_active(rule, today: date | None = None) -> bool:
+    """False once a time-limited rule (e.g. last quarter's rotating 5%) has ended."""
+    until = getattr(rule, "valid_until", None)
+    return not until or until >= (today or date.today()).isoformat()
 
-    A category rule wins if the card has one; otherwise the card's base rate applies.
+
+def rate_for(card, category: str, today: date | None = None) -> tuple[float, str]:
+    """Return (rate, reason) for one card in one category today (ignores yearly caps).
+
+    The best active rule for the category wins; otherwise the card's base rate applies.
     If a rule is somehow lower than the base rate, the base rate is used.
     """
     unit = "x" if getattr(card, "reward_type", "cash") == "points" else "%"
-    for rule in card.rules:
-        if rule.category == category and rule.rate >= card.base_rate:
-            return rule.rate, f"{rule.rate:g}{unit} on {category}"
+    rules = [r for r in card.rules if r.category == category and is_active(r, today) and r.rate >= card.base_rate]
+    if rules:
+        rule = max(rules, key=lambda r: r.rate)
+        until = getattr(rule, "valid_until", None)
+        return rule.rate, f"{rule.rate:g}{unit} on {category}" + (f" until {until}" if until else "")
     return card.base_rate, f"{card.base_rate:g}{unit} base rate"
 
 

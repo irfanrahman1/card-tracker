@@ -31,7 +31,8 @@ export const api = {
   updateCard: (id, card) => request(`/api/cards/${id}`, json("PUT", card)),
   deleteCard: (id) => request(`/api/cards/${id}`, { method: "DELETE" }),
   catalog: () => request("/api/cards/catalog"),
-  addFromCatalog: (catalogId) => request(`/api/cards/from-catalog/${catalogId}`, { method: "POST" }),
+  addFromCatalog: (catalogId, choice) =>
+    request(`/api/cards/from-catalog/${catalogId}${choice ? `?choice=${choice}` : ""}`, { method: "POST" }),
 
   // Purchases
   listTransactions: (month, category) => {

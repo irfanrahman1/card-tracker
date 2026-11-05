@@ -11,12 +11,25 @@ const CARD_THEMES = [
   "linear-gradient(135deg, #7a2952, #d55181)",
 ];
 
+// Same rule as the backend: "Apple Card", not "Apple Apple Card".
+const cardName = (spec) => (spec.name.startsWith(spec.issuer) ? spec.name : `${spec.issuer} ${spec.name}`);
+
 const blankForm = () => ({
   name: "", issuer: "", base_rate: "1", reward_type: "cash", point_value: "1",
-  annual_fee: "0", credits_value: "0", catalog_id: null, rates: {}, caps: {},
+  annual_fee: "0", credits_value: "0", catalog_id: null, rates: {}, caps: {}, special: [],
 });
 
 const unit = (card) => (card.reward_type === "points" ? "x" : "%");
+
+// Rules the simple form can't show (rotating quarterly rates, shared caps). They're kept
+// as-is when you edit a card, so editing never wipes them.
+const isSpecial = (r) => Boolean(r.valid_until || r.cap_group || (r.portion && r.portion < 1));
+const ended = (r) => r.valid_until && r.valid_until < new Date().toISOString().slice(0, 10);
+
+// "7% food (this quarter)" / "3% food" for chips.
+const ruleText = (r, u) =>
+  `${r.rate}${u} ${categoryLabel(r.category).toLowerCase()}` +
+  (r.valid_until ? (ended(r) ? " (ended)" : " (this quarter)") : "");
 
 // List, add (from the catalog or by hand), edit and delete credit cards.
 export default function Cards({ dataVersion, refresh, notify, loadDemo }) {
@@ -25,6 +38,8 @@ export default function Cards({ dataVersion, refresh, notify, loadDemo }) {
   const [form, setForm] = useState(blankForm());
   const [editingId, setEditingId] = useState(null); // null = adding a new card
   const [mode, setMode] = useState(null); // null | "catalog" | "form"
+  const [choosing, setChoosing] = useState(null); // catalog card whose bonus category is being picked
+  const [choice, setChoice] = useState("");
 
   useEffect(() => {
     api.listCards().then(setCards).catch((err) => notify(err.message, "error"));
@@ -35,9 +50,16 @@ export default function Cards({ dataVersion, refresh, notify, loadDemo }) {
 
   const set = (field) => (e) => setForm({ ...form, [field]: e.target.value });
 
-  const addFromCatalog = async (spec) => {
+  const addFromCatalog = async (spec, pick) => {
+    // Choose-your-category cards ask which category first.
+    if (spec.choice && !pick) {
+      setChoosing(spec);
+      setChoice(spec.choice.default);
+      return;
+    }
     try {
-      const card = await api.addFromCatalog(spec.id);
+      const card = await api.addFromCatalog(spec.id, pick);
+      setChoosing(null);
       notify(`Added ${card.name}. Check the point value and perks you use.`);
       setMode(null);
       refresh();
@@ -62,8 +84,9 @@ export default function Cards({ dataVersion, refresh, notify, loadDemo }) {
       annual_fee: String(card.annual_fee),
       credits_value: String(card.credits_value),
       catalog_id: card.catalog_id,
-      rates: Object.fromEntries(card.rules.map((r) => [r.category, String(r.rate)])),
-      caps: Object.fromEntries(card.rules.filter((r) => r.cap).map((r) => [r.category, String(r.cap)])),
+      rates: Object.fromEntries(card.rules.filter((r) => !isSpecial(r)).map((r) => [r.category, String(r.rate)])),
+      caps: Object.fromEntries(card.rules.filter((r) => r.cap && !isSpecial(r)).map((r) => [r.category, String(r.cap)])),
+      special: card.rules.filter(isSpecial),
     });
     setEditingId(card.id);
     setMode("form");
@@ -81,6 +104,8 @@ export default function Cards({ dataVersion, refresh, notify, loadDemo }) {
         rate: parseFloat(rate),
         cap: form.caps[category] ? num(form.caps[category], null) : null,
       }));
+    // Keep rotating/shared-cap rules exactly as they were.
+    rules.push(...form.special.map(({ id, ...rule }) => rule));
     const payload = {
       name: form.name.trim(),
       issuer: form.issuer.trim(),
@@ -134,6 +159,16 @@ export default function Cards({ dataVersion, refresh, notify, loadDemo }) {
               <button className="btn ghost" onClick={() => setMode(null)}>Cancel</button>
             </div>
           </div>
+          {choosing && (
+            <div className="notice info choice-picker">
+              <strong>{cardName(choosing)}:</strong> {choosing.choice.label.toLowerCase()}?
+              <select className="select" value={choice} onChange={(e) => setChoice(e.target.value)} aria-label="Bonus category">
+                {choosing.choice.options.map((c) => <option key={c} value={c}>{categoryLabel(c)}</option>)}
+              </select>
+              <button className="btn small primary" onClick={() => addFromCatalog(choosing, choice)}>Add card</button>
+              <button className="btn small ghost" onClick={() => setChoosing(null)}>Cancel</button>
+            </div>
+          )}
           <div className="catalog-grid">
             {catalog.map((spec) => (
               <button
@@ -143,15 +178,14 @@ export default function Cards({ dataVersion, refresh, notify, loadDemo }) {
                 disabled={ownedCatalogIds.has(spec.id)}
               >
                 <div className="catalog-top">
-                  <span className="row-title">{spec.issuer} {spec.name}</span>
+                  <span className="row-title">{cardName(spec)}</span>
                   <span className="muted small num">{spec.annual_fee ? `${dollars(spec.annual_fee)}/yr` : "No fee"}</span>
                 </div>
                 <div className="row-meta">
-                  {spec.rules.map((r) => (
-                    <span className="chip" key={r.category}>
-                      {r.rate}{spec.reward_type === "points" ? "x" : "%"} {categoryLabel(r.category).toLowerCase()}
-                    </span>
+                  {spec.rules.map((r, i) => (
+                    <span className="chip" key={i}>{ruleText(r, spec.reward_type === "points" ? "x" : "%")}</span>
                   ))}
+                  {spec.choice && <span className="chip">{spec.choice.rate}% category you choose</span>}
                   <span className="chip">{spec.base_rate}{spec.reward_type === "points" ? "x" : "%"} else</span>
                 </div>
                 {ownedCatalogIds.has(spec.id) && <div className="small muted">Already in your wallet</div>}
@@ -235,6 +269,11 @@ export default function Cards({ dataVersion, refresh, notify, loadDemo }) {
                 </div>
               ))}
             </div>
+            {form.special.length > 0 && (
+              <p className="small muted">
+                Also kept as-is: {form.special.map((r) => ruleText(r, points ? "x" : "%")).join(", ")}.
+              </p>
+            )}
             <div className="form-actions">
               <button type="button" className="btn" onClick={() => setMode(null)}>Cancel</button>
               <button className="btn primary">{editingId ? "Save changes" : "Add card"}</button>
@@ -274,9 +313,9 @@ export default function Cards({ dataVersion, refresh, notify, loadDemo }) {
                     .slice()
                     .sort((a, b) => b.rate - a.rate)
                     .map((r) => (
-                      <span className="cc-rate" key={r.category}>
-                        {r.rate}{unit(card)} {categoryLabel(r.category).toLowerCase()}
-                        {r.cap ? ` (to ${dollars(r.cap)})` : ""}
+                      <span className={`cc-rate ${ended(r) ? "ended" : ""}`} key={r.id}>
+                        {ruleText(r, unit(card))}
+                        {r.cap && !r.valid_until ? ` (${r.cap_group ? "shared " : ""}cap ${dollars(r.cap)}/yr)` : ""}
                       </span>
                     ))}
                   <span className="cc-rate">{card.base_rate}{unit(card)} everything else</span>

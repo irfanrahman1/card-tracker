@@ -212,10 +212,21 @@ See `sample-data/purchases.csv` for a small example.
 
 ## Card catalog and point values
 
-`backend/app/catalog/cards.json` lists popular US cards (Amex, Chase, Capital One,
-Citi, Wells Fargo) with their bonus categories, yearly caps and annual fees, each
-with the date its terms were checked and a source link. Pick one on the Cards tab
-and everything fills in. Terms change, so update the JSON when they do.
+`backend/app/catalog/cards.json` lists 18 popular US cards (Amex, Chase, Capital One,
+Citi, Wells Fargo, Discover, Bank of America, Apple, Robinhood) with their bonus
+categories, caps and annual fees, each with the date its terms were checked and a
+source link. Pick one on the Cards tab and everything fills in. Terms change, so
+update the JSON when they do.
+
+Some cards need more than "X% on a category":
+
+- **Rotating quarterly categories** (Discover it, Chase Freedom Flex): the rule has a
+  `valid_until` date (it stops counting after the quarter) and `portion: 0.25` (the
+  optimizer applies it to a quarter of your yearly spending). Update these each quarter.
+- **Shared caps** (BofA Customized Cash, Freedom Flex): rules with the same `cap_group`
+  on a card use up one cap together.
+- **Choose your category** (BofA Customized Cash): you pick the 3% category when adding
+  the card; the optimizer tries the pick that suits your spending best.
 
 Cards are compared by **value per dollar in cents**: rate × point value. 3% cash back is
 3¢/$; 4 points/$ at 1.25¢ per point is 5¢/$. Point value defaults to 1¢ (a safe,
