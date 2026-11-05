@@ -37,6 +37,17 @@ limit is reached.
    | `COOKIE_SECURE` | `true` |
    | `TRUSTED_PROXY_HOPS` | `1` |
 
+   For **forgot password** emails, also add (free with a Gmail account; see below):
+
+   | Name | Value |
+   |---|---|
+   | `APP_URL` | your site's address, e.g. `https://card-tracker-three-steel.vercel.app` |
+   | `SMTP_HOST` | `smtp.gmail.com` |
+   | `SMTP_PORT` | `587` |
+   | `SMTP_USER` | your Gmail address |
+   | `SMTP_PASSWORD` | a Gmail **app password** (mark as sensitive) |
+   | `EMAIL_FROM` | `Card Tracker <your Gmail address>` |
+
 4. **Deploy.** When it's done you get an address like `https://card-tracker-xxxx.vercel.app`.
 5. In the project's **Settings → Functions**, set the function region to **Washington, D.C.
    (iad1)**, next to the Neon database (it's usually the default).
@@ -48,6 +59,16 @@ Every `git push` to `main` redeploys automatically.
 - The login page loads over `https://` (padlock in the address bar).
 - **Try the demo** works.
 - Create your real account. (A fresh database starts empty; upload your CSVs again.)
+
+## Password reset emails (Gmail, free)
+
+1. Turn on **2-Step Verification** for the Google account (myaccount.google.com → Security).
+2. Open **myaccount.google.com/apppasswords**, create an app password named `Card Tracker`,
+   and copy the 16-character password.
+3. Put it in Vercel as `SMTP_PASSWORD` (with the other SMTP settings above) and redeploy.
+
+Gmail allows about 500 emails a day, plenty for a small app. Without these settings the
+reset email isn't sent; on your own computer the link is printed in the terminal instead.
 
 ## Other hosts
 

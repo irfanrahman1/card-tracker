@@ -39,6 +39,8 @@ export const api = {
   login: (email, password) => request("/api/auth/login", json("POST", { email, password })),
   logout: () => request("/api/auth/logout", { method: "POST" }),
   tryDemo: () => request("/api/auth/demo", { method: "POST" }),
+  forgotPassword: (email) => request("/api/auth/forgot-password", json("POST", { email })),
+  resetPassword: (token, new_password) => request("/api/auth/reset-password", json("POST", { token, new_password })),
   changePassword: (current_password, new_password) =>
     request("/api/auth/change-password", json("POST", { current_password, new_password })),
   deleteAccount: (password) => request("/api/auth/delete-account", json("POST", { password })),

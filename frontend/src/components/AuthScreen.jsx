@@ -4,7 +4,12 @@ import { api } from "../api.js";
 // The first screen for anyone not logged in: what the app does, how data is
 // protected, and log in / create account / try the demo.
 export default function AuthScreen({ onSignedIn }) {
-  const [mode, setMode] = useState("signup"); // "signup" | "login"
+  // A reset link from the "forgot password" email looks like  https://site/?reset=TOKEN.
+  // Read when this screen opens (not once per page load), since it's removed after use.
+  const [resetToken] = useState(() => new URLSearchParams(window.location.search).get("reset"));
+  // "signup" | "login" | "forgot" (ask for a reset link) | "reset" (choose a new password)
+  const [mode, setMode] = useState(resetToken ? "reset" : "signup");
+  const [info, setInfo] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -25,7 +30,30 @@ export default function AuthScreen({ onSignedIn }) {
 
   const submit = (e) => {
     e.preventDefault();
+    if (mode === "forgot") {
+      setBusy(true);
+      setError("");
+      api.forgotPassword(email)
+        .then((r) => setInfo(r.message))
+        .catch((err) => setError(err.message))
+        .finally(() => setBusy(false));
+      return;
+    }
+    if (mode === "reset") {
+      run(async () => {
+        const user = await api.resetPassword(resetToken, password);
+        window.history.replaceState(null, "", window.location.pathname); // drop the token from the address bar
+        return user;
+      });
+      return;
+    }
     run(() => (mode === "signup" ? api.signup(email, password) : api.login(email, password)));
+  };
+
+  const switchTo = (next) => {
+    setMode(next);
+    setError("");
+    setInfo("");
   };
 
   return (
@@ -56,36 +84,61 @@ export default function AuthScreen({ onSignedIn }) {
       </section>
 
       <section className="panel auth-form">
+        {(mode === "forgot" || mode === "reset") ? (
+          <div className="grid" style={{ gap: 6, marginBottom: 14 }}>
+            <h2>{mode === "forgot" ? "Reset your password" : "Choose a new password"}</h2>
+            <p className="small muted" style={{ margin: 0 }}>
+              {mode === "forgot"
+                ? "Enter your account's email and we'll send you a link to choose a new password."
+                : "This logs you out on every other device."}
+            </p>
+          </div>
+        ) : (
         <div className="auth-tabs" role="tablist">
           <button role="tab" aria-selected={mode === "signup"} className={mode === "signup" ? "active" : ""}
-            onClick={() => { setMode("signup"); setError(""); }}>Create account</button>
+            onClick={() => switchTo("signup")}>Create account</button>
           <button role="tab" aria-selected={mode === "login"} className={mode === "login" ? "active" : ""}
-            onClick={() => { setMode("login"); setError(""); }}>Log in</button>
+            onClick={() => switchTo("login")}>Log in</button>
         </div>
+        )}
         <form onSubmit={submit} className="grid" style={{ gap: 12 }}>
+          {mode !== "reset" && (
           <div className="field">
             <label htmlFor="auth-email">Email</label>
             <input id="auth-email" className="input" type="email" autoComplete="email" required
               value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
+          )}
+          {mode !== "forgot" && (
           <div className="field">
-            <label htmlFor="auth-password">Password</label>
+            <label htmlFor="auth-password">{mode === "reset" ? "New password" : "Password"}</label>
             <div className="password-row">
               <input id="auth-password" className="input" type={showPassword ? "text" : "password"} required
-                minLength={mode === "signup" ? 10 : undefined}
-                autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                minLength={mode === "login" ? undefined : 10}
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
                 value={password} onChange={(e) => setPassword(e.target.value)} />
               <button type="button" className="btn ghost small" onClick={() => setShowPassword((s) => !s)}>
                 {showPassword ? "Hide" : "Show"}
               </button>
             </div>
-            {mode === "signup" && <span className="small muted">At least 10 characters. A short sentence works well.</span>}
+            {mode !== "login" && <span className="small muted">At least 10 characters. A short sentence works well.</span>}
+            {mode === "login" && (
+              <button type="button" className="link small forgot-link" onClick={() => switchTo("forgot")}>
+                Forgot password?
+              </button>
+            )}
           </div>
+          )}
           {error && <div className="notice bad" style={{ marginTop: 0 }} role="alert">{error}</div>}
-          <button className="btn primary" disabled={busy}>
-            {busy ? "One moment…" : mode === "signup" ? "Create account" : "Log in"}
+          {info && <div className="notice good" style={{ marginTop: 0 }} role="status">{info}</div>}
+          <button className="btn primary" disabled={busy || (mode === "forgot" && info)}>
+            {busy ? "One moment…" : { signup: "Create account", login: "Log in", forgot: "Send reset link", reset: "Save new password" }[mode]}
           </button>
+          {(mode === "forgot" || mode === "reset") && (
+            <button type="button" className="btn ghost" onClick={() => switchTo("login")}>← Back to log in</button>
+          )}
         </form>
+        {(mode === "signup" || mode === "login") && (<>
         <div className="auth-or"><span>or</span></div>
         <button className="btn" style={{ width: "100%" }} disabled={busy} onClick={() => run(api.tryDemo)}>
           ⚡ Try the demo, no sign-up
@@ -93,6 +146,7 @@ export default function AuthScreen({ onSignedIn }) {
         <p className="small muted" style={{ marginBottom: 0, textAlign: "center" }}>
           The demo uses sample data and is deleted after 24 hours.
         </p>
+        </>)}
       </section>
     </div>
   );

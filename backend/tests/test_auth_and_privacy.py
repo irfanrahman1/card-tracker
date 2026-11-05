@@ -136,3 +136,44 @@ def test_faked_forwarded_for_header_does_not_dodge_the_limit():
     r = attacker.post("/api/auth/login", headers={"X-Forwarded-For": "10.9.9.9"},
                       json={"email": "spoof@example.com", "password": PASSWORD})
     assert r.status_code == 429
+
+
+def reset_link_token(capsys):
+    """The email isn't sent in tests (no SMTP); it's printed. Pull the token out of it."""
+    out = capsys.readouterr().out
+    return out.split("?reset=")[1].split()[0]
+
+
+def test_forgot_password_flow(capsys):
+    signup("forgetful@example.com")
+    client = new_client()
+    r = client.post("/api/auth/forgot-password", json={"email": "forgetful@example.com"})
+    assert r.status_code == 200
+    token = reset_link_token(capsys)
+    r = client.post("/api/auth/reset-password", json={"token": token, "new_password": "a brand new password"})
+    assert r.status_code == 200 and client.get("/api/auth/me").status_code == 200
+    # Old password no longer works; new one does.
+    assert new_client().post("/api/auth/login", json={"email": "forgetful@example.com", "password": PASSWORD}).status_code == 401
+    assert new_client().post("/api/auth/login", json={"email": "forgetful@example.com", "password": "a brand new password"}).status_code == 200
+    # The link works only once.
+    again = new_client().post("/api/auth/reset-password", json={"token": token, "new_password": "another new password"})
+    assert again.status_code == 400
+
+
+def test_forgot_password_same_answer_for_unknown_email(capsys):
+    signup("known@example.com")
+    a = new_client().post("/api/auth/forgot-password", json={"email": "known@example.com"})
+    b = new_client().post("/api/auth/forgot-password", json={"email": "unknown@example.com"})
+    assert a.status_code == b.status_code == 200 and a.json() == b.json()
+
+
+def test_reset_logs_out_other_devices(capsys):
+    laptop = signup("devices@example.com")
+    new_client().post("/api/auth/forgot-password", json={"email": "devices@example.com"})
+    new_client().post("/api/auth/reset-password", json={"token": reset_link_token(capsys), "new_password": "a brand new password"})
+    assert laptop.get("/api/auth/me").status_code == 401
+
+
+def test_expired_or_fake_reset_links_fail():
+    r = new_client().post("/api/auth/reset-password", json={"token": "x" * 43, "new_password": "a brand new password"})
+    assert r.status_code == 400

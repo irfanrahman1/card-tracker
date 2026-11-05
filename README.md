@@ -175,6 +175,7 @@ and `backend/app/routers/auth.py`.
 | Cross-site attacks | No CORS; state-changing requests from other websites are rejected (Origin check) on top of SameSite cookies. Security headers: `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Cache-Control: no-store` on the API. |
 | Minimal data | Only an email. Never card numbers. |
 | Leave anytime | Account menu: delete all my data, or delete the account and everything in it. Changing the password logs out other devices. |
+| Forgot password | One-time emailed link (random token, only its hash stored, 30-minute expiry, single use). Same reply whether or not the email has an account; rate-limited; link address comes from `APP_URL`, never the request; resetting logs out every device. |
 
 **Upgrading an older copy:** data created before accounts existed is given to the
 first account you create, so your cards and purchases carry over.
@@ -288,6 +289,7 @@ the category is guessed first (so Amazon → shopping).
 | GET | `/api/auth/me` | Who's logged in (401 if nobody) |
 | POST | `/api/auth/demo` | Throwaway demo account with sample data |
 | POST | `/api/auth/change-password` · `/delete-account` | Change password / delete account and all data |
+| POST | `/api/auth/forgot-password` · `/reset-password` | Email a reset link / set a new password with it |
 | GET | `/api/categories` | List categories |
 | GET / POST | `/api/cards` | List / add cards (with `rules`) |
 | PUT / DELETE | `/api/cards/{id}` | Edit / remove a card |

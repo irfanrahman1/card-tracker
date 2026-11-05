@@ -176,6 +176,7 @@ def delete_expired(db: Session) -> None:
     now = utcnow()
     db.query(models.LoginSession).filter(models.LoginSession.expires_at < now).delete()
     db.query(models.FailedAttempt).filter(models.FailedAttempt.at < now - timedelta(days=1)).delete()
+    db.query(models.PasswordReset).filter(models.PasswordReset.expires_at < now).delete()
     old_demos = db.scalars(select(models.User).where(
         models.User.is_demo.is_(True), models.User.created_at < now - timedelta(hours=DEMO_HOURS))).all()
     for user in old_demos:
@@ -189,7 +190,8 @@ def delete_user_data(db: Session, user_id: int, sessions: bool = True) -> None:
     their login sessions too)."""
     card_ids = select(models.Card.id).where(models.Card.user_id == user_id)
     db.query(models.RewardRule).filter(models.RewardRule.card_id.in_(card_ids)).delete(synchronize_session=False)
-    tables = [models.Transaction, models.Card, models.MerchantRule] + ([models.LoginSession] if sessions else [])
+    tables = [models.Transaction, models.Card, models.MerchantRule] + (
+        [models.LoginSession, models.PasswordReset] if sessions else [])
     for model in tables:
         db.query(model).filter(model.user_id == user_id).delete(synchronize_session=False)
 

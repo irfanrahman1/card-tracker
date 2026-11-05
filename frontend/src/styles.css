@@ -423,3 +423,4 @@ h2 { font-size: 17px; font-weight: 650; }
   .auth-headline { font-size: 26px; }
   .account-email { display: none; }
 }
+.forgot-link { align-self: flex-end; margin-top: 2px; color: var(--text-2); }

@@ -144,3 +144,12 @@ class UserOut(BaseModel):
     id: int
     email: str
     is_demo: bool
+
+
+class ForgotPasswordIn(BaseModel):
+    email: str = Field(max_length=254)
+
+
+class ResetPasswordIn(BaseModel):
+    token: str = Field(min_length=20, max_length=200)
+    new_password: str = Field(max_length=128)

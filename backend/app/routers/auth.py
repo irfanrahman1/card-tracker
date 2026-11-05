@@ -1,11 +1,13 @@
 """Sign up, log in, log out, try the demo, change password, delete account."""
+import os
 import secrets
+from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from .. import auth, models, schemas
+from .. import auth, emailer, models, schemas
 from ..auth import current_user, limiter
 from ..database import get_db
 from .demo import load_demo_data
@@ -103,3 +105,55 @@ def delete_account(payload: schemas.PasswordIn, request: Request, response: Resp
     db.delete(user)
     db.commit()
     response.delete_cookie(auth.COOKIE_NAME, path="/")
+
+
+# ---------- Forgot password ----------
+
+RESET_MINUTES = 30
+# Where reset links point. Set APP_URL to your site's address in production. It's never
+# taken from the request, so a forged Host header can't redirect links elsewhere.
+APP_URL = os.environ.get("APP_URL", "http://localhost:5173").rstrip("/")
+
+
+@router.post("/forgot-password")
+def forgot_password(payload: schemas.ForgotPasswordIn, request: Request, db: Session = Depends(get_db)):
+    """Email a one-time reset link. Always gives the same answer, so it doesn't reveal
+    whether an email has an account."""
+    email = (payload.email or "").strip().lower()
+    keys = (f"reset-ip:{auth.client_ip(request)}", f"reset-email:{email}")
+    limiter.check(db, *keys)
+    limiter.failed(db, *keys)  # every request counts, so the form can't be used to spam inboxes
+    user = db.scalar(select(models.User).where(models.User.email == email, models.User.is_demo.is_(False)))
+    if user:
+        token = secrets.token_urlsafe(32)
+        db.add(models.PasswordReset(user_id=user.id, token_hash=auth._hash_token(token),
+                                    expires_at=auth.utcnow() + timedelta(minutes=RESET_MINUTES)))
+        db.commit()
+        emailer.send_email(
+            user.email,
+            "Reset your Card Tracker password",
+            f"Someone asked to reset the password for your Card Tracker account.\n\n"
+            f"To choose a new password, open this link within {RESET_MINUTES} minutes:\n"
+            f"{APP_URL}/?reset={token}\n\n"
+            f"If it wasn't you, ignore this email. Your password won't change.",
+        )
+    return {"message": "If that email has an account, a reset link is on its way."}
+
+
+@router.post("/reset-password", response_model=schemas.UserOut)
+def reset_password(payload: schemas.ResetPasswordIn, request: Request, response: Response,
+                   db: Session = Depends(get_db)):
+    """Set a new password with a reset link. Logs out every other device, then logs you in."""
+    reset = db.scalar(select(models.PasswordReset).where(
+        models.PasswordReset.token_hash == auth._hash_token(payload.token)))
+    if not reset or reset.used or reset.expires_at < auth.utcnow():
+        raise HTTPException(400, "This reset link is invalid or has expired. Ask for a new one.")
+    user = db.get(models.User, reset.user_id)
+    auth.check_new_password(payload.new_password, user.email)
+    user.password_hash = auth.hash_password(payload.new_password)
+    # Use up this link and any others for the account, and log out everywhere.
+    db.query(models.PasswordReset).filter(models.PasswordReset.user_id == user.id).update({"used": True})
+    db.query(models.LoginSession).filter(models.LoginSession.user_id == user.id).delete()
+    db.commit()
+    auth.start_session(db, response, user)
+    return user

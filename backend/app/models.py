@@ -41,6 +41,19 @@ class FailedAttempt(Base):
     at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, index=True)
 
 
+class PasswordReset(Base):
+    """A one-time "forgot password" link. Only a hash of the token is stored; it expires
+    after 30 minutes and can be used once."""
+
+    __tablename__ = "password_resets"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    used: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
 class LoginSession(Base):
     """A logged-in browser. The cookie holds a random token; only its SHA-256 hash is
     stored, so a leaked database can't be used to log in as anyone."""
