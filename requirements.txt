@@ -1,1 +1,8 @@
--r backend/requirements.txt
+# Python packages for Vercel, which reads this file at the repo root.
+# Keep it identical to backend/requirements.txt (a test checks this).
+fastapi==0.162.0
+uvicorn[standard]==0.54.0
+SQLAlchemy==2.1.6
+python-multipart==0.0.32
+argon2-cffi==25.1.0
+psycopg[binary]==3.3.8
