@@ -347,3 +347,27 @@ h2 { font-size: 17px; font-weight: 650; }
 .choice-picker { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 12px; }
 .choice-picker .select { width: auto; }
 .cc-rate.ended { opacity: 0.5; text-decoration: line-through; }
+
+/* ---------- By card (Overview) ---------- */
+.by-card { display: flex; flex-direction: column; }
+.by-card-row {
+  display: grid; grid-template-columns: minmax(0, 1.4fr) auto minmax(80px, 1fr) 100px 140px; gap: 12px;
+  align-items: center; width: 100%; text-align: left; border: 0; background: transparent;
+  padding: 10px 6px; border-radius: 8px; cursor: pointer; border-bottom: 1px solid var(--border);
+}
+.by-card-row:last-child { border-bottom: 0; }
+.by-card-row:hover { background: var(--surface-2); }
+.by-card-row .bar-track { display: block; }
+.by-card-fill { display: block; background: var(--text-2); }
+.by-card-spent { text-align: right; font-weight: 650; }
+.by-card-rewards { text-align: right; }
+@media (max-width: 760px) {
+  .by-card-row { grid-template-columns: 1fr auto; grid-template-areas: "name spent" "count rewards" "bar bar"; gap: 4px 8px; }
+  .by-card-row .row-title { grid-area: name; }
+  .by-card-row .muted { grid-area: count; }
+  .by-card-row .bar-track { grid-area: bar; }
+  .by-card-spent { grid-area: spent; }
+  .by-card-rewards { grid-area: rewards; }
+  .panel-head .filters { width: 100%; }
+  .panel-head .filters .select { flex: 1; min-width: 0; }
+}

@@ -16,23 +16,41 @@ from ..recommendation import best_card, point_value, rank_cards, rate_for
 router = APIRouter(prefix="/api", tags=["insights"])
 
 
+def card_filter(rows, card: str | None):
+    """Keep purchases for one card: `card` is a card id, "none" (no card), or None/"all"."""
+    if not card or card == "all":
+        return rows
+    if card == "none":
+        return [t for t in rows if t.card_id is None]
+    try:
+        card_id = int(card)
+    except ValueError:
+        raise HTTPException(400, 'card must be a card id, "none" or "all"')
+    return [t for t in rows if t.card_id == card_id]
+
+
 @router.get("/summary")
-def monthly_summary(month: str | None = None, db: Session = Depends(get_db)):
-    """Spending by category for one month ('YYYY-MM').
+def monthly_summary(month: str | None = None, card: str | None = None, db: Session = Depends(get_db)):
+    """Spending by category for one month ('YYYY-MM'), for all cards or one `card`.
 
     Defaults to the most recent month that has purchases. Also reports, for purchases
-    made with a known card, the rewards earned vs. what the best card would have earned.
+    made with a known card, the rewards earned vs. what the best card would have earned,
+    and (for all cards) each card's spending and rewards side by side.
     """
-    transactions = db.scalars(select(models.Transaction)).all()
+    all_transactions = db.scalars(select(models.Transaction)).all()
+    transactions = card_filter(all_transactions, card)
     cards = db.scalars(select(models.Card)).all()
     cards_by_id = {c.id: c for c in cards}
 
-    months = sorted({t.date.strftime("%Y-%m") for t in transactions}, reverse=True)
+    # Month choices come from every purchase, so switching cards keeps the same list.
+    months = sorted({t.date.strftime("%Y-%m") for t in all_transactions}, reverse=True)
     if month is None:
         month = months[0] if months else date.today().strftime("%Y-%m")
 
     # Every category shows, even at $0. Refunds (negative amounts) subtract from theirs.
     by_category = {c: 0.0 for c in CATEGORIES}
+    # Per card this month: {card id or None: {"spent", "rewards"}}
+    by_card = defaultdict(lambda: {"spent": 0.0, "rewards": 0.0, "count": 0})
     earned = possible = refunds = 0.0
     count = with_card = 0
     for t in transactions:
@@ -43,6 +61,9 @@ def monthly_summary(month: str | None = None, db: Session = Depends(get_db)):
         else:
             refunds += -t.amount
         by_category[t.category] = by_category.get(t.category, 0) + t.amount
+        entry = by_card[t.card_id if t.card_id in cards_by_id else None]
+        entry["spent"] += t.amount
+        entry["count"] += 1 if t.amount > 0 else 0
         # Compare only purchases made with a known card, so the two numbers match up.
         # Card fees don't earn rewards, so they're left out.
         if t.card_id in cards_by_id and t.category != "fees":
@@ -51,6 +72,7 @@ def monthly_summary(month: str | None = None, db: Session = Depends(get_db)):
             rate, _ = rate_for(card, t.category)
             cents = rate * point_value(card)  # value per dollar, so points count fairly
             earned += t.amount * cents / 100
+            entry["rewards"] += t.amount * cents / 100
             # A refund takes back what its own card earned, whatever the "best" card is.
             best_cents = best_card(cards, t.category, t.amount).cents_per_dollar if t.amount > 0 else cents
             possible += t.amount * best_cents / 100
@@ -65,6 +87,14 @@ def monthly_summary(month: str | None = None, db: Session = Depends(get_db)):
         # Across all months: purchases with no card (rewards can't be counted for them).
         "without_card_total": sum(1 for t in transactions if t.card_id not in cards_by_id),
         "card_count": len(cards),
+        "card": card or "all",
+        # Spending and rewards for each card this month, biggest spender first.
+        "by_card": sorted(
+            [{"card_id": cid, "name": cards_by_id[cid].name if cid else "No card",
+              "spent": round(v["spent"], 2), "rewards": round(v["rewards"], 2), "count": v["count"]}
+             for cid, v in by_card.items()],
+            key=lambda c: -c["spent"],
+        ),
         "by_category": {c: round(v, 2) for c, v in by_category.items()},
         "rewards_earned": round(earned, 2),
         "rewards_possible": round(possible, 2),
@@ -72,10 +102,10 @@ def monthly_summary(month: str | None = None, db: Session = Depends(get_db)):
 
 
 @router.get("/summary/trend")
-def monthly_trend(db: Session = Depends(get_db)):
-    """Spending by category for every month, oldest first (for a chart)."""
+def monthly_trend(card: str | None = None, db: Session = Depends(get_db)):
+    """Spending by category for every month, oldest first (for a chart). Optional `card`."""
     totals = defaultdict(lambda: {c: 0.0 for c in CATEGORIES})
-    for t in db.scalars(select(models.Transaction)):
+    for t in card_filter(db.scalars(select(models.Transaction)).all(), card):
         totals[t.date.strftime("%Y-%m")][t.category] += t.amount
     return [
         {"month": m, **{c: round(v, 2) for c, v in totals[m].items()}}

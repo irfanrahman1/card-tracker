@@ -6,7 +6,7 @@ import { CATEGORIES, categoryColor, money, prettyMerchant, shortDate } from "../
 // amount and share, so the color is never the only way to read it.
 // Tap a category to see its stores; tap a store to see each purchase.
 // A category can be negative if refunds/credits outweigh spending; its bar is empty.
-export default function CategoryBars({ byCategory, total, month, dataVersion }) {
+export default function CategoryBars({ byCategory, total, month, card, dataVersion }) {
   const [open, setOpen] = useState(null); // category id that's expanded
   const max = Math.max(...Object.values(byCategory), 0);
   return (
@@ -40,7 +40,7 @@ export default function CategoryBars({ byCategory, total, month, dataVersion }) 
                 <span className="chevron" aria-hidden="true">{value !== 0 ? (isOpen ? "▾" : "▸") : ""}</span>
               </div>
             </button>
-            {isOpen && <CategoryDetail month={month} category={c.id} dataVersion={dataVersion} />}
+            {isOpen && <CategoryDetail month={month} category={c.id} card={card} dataVersion={dataVersion} />}
           </div>
         );
       })}
@@ -49,13 +49,13 @@ export default function CategoryBars({ byCategory, total, month, dataVersion }) 
 }
 
 // The stores in one category this month, biggest first. Tap a store for its purchases.
-function CategoryDetail({ month, category, dataVersion }) {
+function CategoryDetail({ month, category, card, dataVersion }) {
   const [rows, setRows] = useState(null);
   const [openStore, setOpenStore] = useState(null);
 
   useEffect(() => {
-    api.listTransactions(month, category).then(setRows).catch(() => setRows([]));
-  }, [month, category, dataVersion]);
+    api.listTransactions(month, category, card).then(setRows).catch(() => setRows([]));
+  }, [month, category, card, dataVersion]);
 
   if (!rows) return <div className="cat-detail muted small">Loading…</div>;
 

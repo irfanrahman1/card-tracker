@@ -6,20 +6,25 @@ from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..database import get_db
 from ..ingest import save_from_source
+from .insights import card_filter
 from ..sources import CSVSource, ManualSource
 
 router = APIRouter(prefix="/api/transactions", tags=["transactions"])
 
 
 @router.get("", response_model=list[schemas.TransactionOut])
-def list_transactions(month: str | None = None, category: str | None = None, db: Session = Depends(get_db)):
-    """List purchases, newest first. Optional filters: `month` like '2026-10', `category`."""
+def list_transactions(
+    month: str | None = None, category: str | None = None, card: str | None = None,
+    db: Session = Depends(get_db),
+):
+    """List purchases, newest first. Optional filters: `month` like '2026-10', `category`,
+    and `card` (a card id, or "none" for purchases with no card)."""
     query = select(models.Transaction).order_by(
         models.Transaction.date.desc(), models.Transaction.id.desc()
     )
     if category:
         query = query.where(models.Transaction.category == category)
-    rows = db.scalars(query).all()
+    rows = card_filter(db.scalars(query).all(), card)
     if month:
         rows = [t for t in rows if t.date.strftime("%Y-%m") == month]
     return rows

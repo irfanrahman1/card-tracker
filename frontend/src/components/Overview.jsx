@@ -4,20 +4,29 @@ import { categoryLabel, money, monthLabel } from "../categories.js";
 import CategoryBars from "./CategoryBars.jsx";
 import TrendChart from "./TrendChart.jsx";
 
-// Dashboard: totals for a month, spending by category, and the monthly trend.
+// Dashboard: totals for a month, spending by category, and the monthly trend,
+// for all cards together or one card at a time.
 export default function Overview({ dataVersion, refresh, loadDemo, goTo, notify }) {
   const [month, setMonth] = useState(null); // null = latest month with data
   const [summary, setSummary] = useState(null);
   const [trend, setTrend] = useState([]);
+  const [card, setCard] = useState("all"); // "all", a card id, or "none"
+  const [cards, setCards] = useState([]);
 
   useEffect(() => {
-    Promise.all([api.summary(month), api.trend()])
-      .then(([s, t]) => {
+    Promise.all([api.summary(month, card), api.trend(card), api.listCards()])
+      .then(([s, t, c]) => {
         setSummary(s);
         setTrend(t);
+        setCards(c);
       })
       .catch((err) => notify(err.message, "error"));
-  }, [month, dataVersion, notify]);
+  }, [month, card, dataVersion, notify]);
+
+  // If the chosen card was deleted, go back to all cards.
+  useEffect(() => {
+    if (card !== "all" && card !== "none" && cards.length && !cards.some((c) => String(c.id) === card)) setCard("all");
+  }, [cards, card]);
 
   // After "Clear", the chosen month may no longer exist; fall back to latest.
   useEffect(() => {
@@ -43,22 +52,29 @@ export default function Overview({ dataVersion, refresh, loadDemo, goTo, notify 
   // Biggest category this month, for the headline tile.
   const top = Object.entries(summary.by_category).sort((a, b) => b[1] - a[1])[0];
   const missed = summary.rewards_possible - summary.rewards_earned;
+  const cardLabel = card === "none" ? "No card linked" : cards.find((c) => String(c.id) === card)?.name ?? "";
+  // The side-by-side panel only helps when you have more than one card with purchases.
+  const showByCard = card === "all" && summary.by_card.length > 1;
 
   return (
     <div className="grid">
       <div className="panel-head" style={{ marginBottom: 0 }}>
-        <h2>{monthLabel(summary.month)}</h2>
-        <select
-          className="select"
-          style={{ width: "auto" }}
-          value={summary.month}
-          onChange={(e) => setMonth(e.target.value)}
-          aria-label="Month"
-        >
-          {summary.months.map((m) => (
-            <option key={m} value={m}>{monthLabel(m)}</option>
-          ))}
-        </select>
+        <h2>
+          {monthLabel(summary.month)}
+          {card !== "all" && <span className="muted"> · {cardLabel}</span>}
+        </h2>
+        <div className="filters">
+          <select className="select" value={card} onChange={(e) => setCard(e.target.value)} aria-label="Card">
+            <option value="all">All cards</option>
+            {cards.map((c) => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
+            {summary.without_card_total > 0 && <option value="none">No card linked</option>}
+          </select>
+          <select className="select" value={summary.month} onChange={(e) => setMonth(e.target.value)} aria-label="Month">
+            {summary.months.map((m) => (
+              <option key={m} value={m}>{monthLabel(m)}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <SetupChecklist summary={summary} goTo={goTo} refresh={refresh} notify={notify} />
@@ -99,13 +115,39 @@ export default function Overview({ dataVersion, refresh, loadDemo, goTo, notify 
         </div>
       </div>
 
+      {showByCard && (
+        <section className="panel">
+          <div className="panel-head">
+            <h2>By card</h2>
+            <span className="muted small">Tap a card to see only its spending</span>
+          </div>
+          <div className="by-card">
+            {summary.by_card.map((c) => {
+              const share = summary.total > 0 ? Math.max(c.spent, 0) / summary.total : 0;
+              return (
+                <button key={c.card_id ?? "none"} className="by-card-row"
+                  onClick={() => setCard(c.card_id ? String(c.card_id) : "none")}>
+                  <span className="row-title">{c.name}</span>
+                  <span className="muted small">{c.count} purchases</span>
+                  <span className="bar-track"><span className="bar-fill by-card-fill" style={{ width: `${share * 100}%` }} /></span>
+                  <span className="num by-card-spent">{money(c.spent)}</span>
+                  <span className="num small good-text by-card-rewards">
+                    {c.card_id ? `+${money(c.rewards)} rewards` : "no rewards counted"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       <div className="grid two">
         <section className="panel">
           <div className="panel-head">
             <h2>Spending by category</h2>
             <span className="muted small">Tap one to see where</span>
           </div>
-          <CategoryBars byCategory={summary.by_category} total={summary.total} month={summary.month} dataVersion={dataVersion} />
+          <CategoryBars byCategory={summary.by_category} total={summary.total} month={summary.month} card={card} dataVersion={dataVersion} />
         </section>
         <section className="panel">
           <div className="panel-head">

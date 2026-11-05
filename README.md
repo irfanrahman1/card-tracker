@@ -262,8 +262,8 @@ the category is guessed first (so Amazon → shopping).
 | POST | `/api/transactions` | Add a purchase manually |
 | DELETE | `/api/transactions/{id}` | Remove a purchase |
 | POST | `/api/transactions/upload` | Import a CSV (form fields: `file`, optional `card_id`) |
-| GET | `/api/summary?month=YYYY-MM` | Spending by category for a month (defaults to latest) + rewards earned vs. best possible |
-| GET | `/api/summary/trend` | Spending by category for every month |
+| GET | `/api/summary?month=YYYY-MM&card=ID` | Spending by category for a month (defaults to latest), for all cards or one (`card=none` = no card), rewards earned vs. best possible, and spending per card |
+| GET | `/api/summary/trend?card=ID` | Spending by category for every month (optional card filter) |
 | GET | `/api/recommend?amount=50&category=food` | Best card (or use `merchant=Amazon` instead of `category`) |
 | POST | `/api/demo/load` | Add demo cards + ~90 sample purchases (safe to repeat) |
 | POST | `/api/demo/clear` | Delete all cards and purchases |

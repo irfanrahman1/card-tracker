@@ -35,10 +35,12 @@ export const api = {
     request(`/api/cards/from-catalog/${catalogId}${choice ? `?choice=${choice}` : ""}`, { method: "POST" }),
 
   // Purchases
-  listTransactions: (month, category) => {
+  // card: a card id, "none" (no card), or "all"/empty for every card.
+  listTransactions: (month, category, card) => {
     const params = new URLSearchParams();
     if (month) params.set("month", month);
     if (category) params.set("category", category);
+    if (card && card !== "all") params.set("card", card);
     return request(`/api/transactions?${params}`);
   },
   // Link purchases with no card to this card.
@@ -55,8 +57,13 @@ export const api = {
   },
 
   // Insights
-  summary: (month) => request(`/api/summary${month ? `?month=${month}` : ""}`),
-  trend: () => request("/api/summary/trend"),
+  summary: (month, card) => {
+    const params = new URLSearchParams();
+    if (month) params.set("month", month);
+    if (card && card !== "all") params.set("card", card);
+    return request(`/api/summary?${params}`);
+  },
+  trend: (card) => request(`/api/summary/trend${card && card !== "all" ? `?card=${card}` : ""}`),
   recommend: ({ amount, category, merchant }) => {
     const params = new URLSearchParams({ amount });
     if (category) params.set("category", category);
