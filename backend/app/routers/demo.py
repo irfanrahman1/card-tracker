@@ -1,45 +1,48 @@
-"""'Load demo data' and 'Clear all data'."""
+"""Sample data for the logged-in user, and 'delete all my data'."""
 from fastapi import APIRouter, Depends
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import models
+from ..auth import current_user, delete_user_data
+from ..catalog import find_card
 from ..database import get_db
 from ..ingest import save_from_source
-from ..sources import DEMO_CARDS, DemoSource
+from ..sources import DEMO_CARD_IDS, DemoSource
+from .cards import card_from_catalog
 
 router = APIRouter(prefix="/api/demo", tags=["demo"])
 
 
-@router.post("/load")
-def load_demo(db: Session = Depends(get_db)):
-    """Add the demo cards (if missing) and ~3 months of sample purchases.
+def load_demo_data(db: Session, user: models.User) -> dict:
+    """Give `user` a few popular cards and ~3 months of sample purchases.
 
-    Safe to click more than once: existing demo cards and purchases are reused.
+    Safe to run more than once: cards they already have are reused, and sample
+    purchases are only added once.
     """
-    existing = {c.name: c for c in db.scalars(select(models.Card))}
+    owned = {c.catalog_id: c for c in db.scalars(select(models.Card).where(models.Card.user_id == user.id))}
     card_ids = []
-    for spec in DEMO_CARDS:
-        card = existing.get(spec["name"])
+    for catalog_id in DEMO_CARD_IDS:
+        card = owned.get(catalog_id)
         if not card:
-            card = models.Card(
-                name=spec["name"], issuer=spec["issuer"], base_rate=spec["base_rate"],
-                rules=[models.RewardRule(**r) for r in spec["rules"]],
-            )
+            card = card_from_catalog(find_card(catalog_id), user)
             db.add(card)
             db.flush()  # assigns card.id
         card_ids.append(card.id)
     db.commit()
-
-    created = save_from_source(db, DemoSource(card_ids))
+    created = save_from_source(db, DemoSource(card_ids), user)
     return {"cards": len(card_ids), "transactions_added": len(created)}
 
 
+@router.post("/load")
+def load_demo(db: Session = Depends(get_db), user: models.User = Depends(current_user)):
+    """Add sample cards and purchases to your account."""
+    return load_demo_data(db, user)
+
+
 @router.post("/clear")
-def clear_all(db: Session = Depends(get_db)):
-    """Delete every card and purchase. Handy for starting over."""
-    db.execute(delete(models.Transaction))
-    db.execute(delete(models.RewardRule))
-    db.execute(delete(models.Card))
+def clear_all(db: Session = Depends(get_db), user: models.User = Depends(current_user)):
+    """Delete all of your cards, purchases and category fixes (your account stays)."""
+    delete_user_data(db, user.id, sessions=False)  # stay logged in
     db.commit()
     return {"status": "cleared"}

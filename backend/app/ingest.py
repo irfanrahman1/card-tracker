@@ -26,13 +26,14 @@ def pick_category(item, merchant: str, rules: dict[str, str], source_name: str) 
     return normalize_category(item.category, item.merchant, item.description)
 
 
-def save_from_source(db: Session, source: TransactionSource) -> list[models.Transaction]:
-    """Fetch from `source`, normalize each row, skip duplicates, and save.
+def save_from_source(db: Session, source: TransactionSource, user: models.User) -> list[models.Transaction]:
+    """Fetch from `source`, normalize each row, skip duplicates, and save for `user`.
 
     Returns the newly created rows.
     """
-    known_card_ids = set(db.scalars(select(models.Card.id)))
-    rules = {r.merchant: r.category for r in db.scalars(select(models.MerchantRule))}
+    known_card_ids = set(db.scalars(select(models.Card.id).where(models.Card.user_id == user.id)))
+    rules = {r.merchant: r.category for r in db.scalars(
+        select(models.MerchantRule).where(models.MerchantRule.user_id == user.id))}
     created = []
 
     for item in source.fetch():
@@ -41,6 +42,7 @@ def save_from_source(db: Session, source: TransactionSource) -> list[models.Tran
         if item.external_id:
             exists = db.scalar(
                 select(models.Transaction.id).where(
+                    models.Transaction.user_id == user.id,
                     models.Transaction.source == source.name,
                     models.Transaction.external_id == item.external_id,
                 )
@@ -50,12 +52,13 @@ def save_from_source(db: Session, source: TransactionSource) -> list[models.Tran
 
         merchant = clean_merchant(item.merchant)
         row = models.Transaction(
+            user_id=user.id,
             date=item.date,
             merchant=merchant,
             description=item.description.strip(),
             amount=round(item.amount, 2),
             category=pick_category(item, merchant, rules, source.name),
-            # Ignore card ids that don't exist rather than failing the whole import.
+            # Ignore card ids that don't exist (or aren't yours) rather than failing the import.
             card_id=item.card_id if item.card_id in known_card_ids else None,
             source=source.name,
             external_id=item.external_id,

@@ -1,8 +1,16 @@
 // All calls to the backend live here. Paths start with /api, which Vite
 // forwards to FastAPI during development (see vite.config.js).
 
+// Fired when the server says "please log in" (expired session, logged out elsewhere),
+// so the app can show the login screen.
+export const AUTH_REQUIRED = "auth-required";
+
 async function request(path, options = {}) {
-  const res = await fetch(path, options);
+  // The login cookie is sent automatically: same address as the website.
+  const res = await fetch(path, { credentials: "same-origin", ...options });
+  if (res.status === 401 && !path.startsWith("/api/auth/")) {
+    window.dispatchEvent(new Event(AUTH_REQUIRED));
+  }
   if (!res.ok) {
     // FastAPI puts error messages in "detail" (a string, or a list for validation errors).
     let message = `Request failed (${res.status})`;
@@ -25,6 +33,16 @@ const json = (method, body) => ({
 });
 
 export const api = {
+  // Account
+  me: () => request("/api/auth/me"),
+  signup: (email, password) => request("/api/auth/signup", json("POST", { email, password })),
+  login: (email, password) => request("/api/auth/login", json("POST", { email, password })),
+  logout: () => request("/api/auth/logout", { method: "POST" }),
+  tryDemo: () => request("/api/auth/demo", { method: "POST" }),
+  changePassword: (current_password, new_password) =>
+    request("/api/auth/change-password", json("POST", { current_password, new_password })),
+  deleteAccount: (password) => request("/api/auth/delete-account", json("POST", { password })),
+
   // Cards
   listCards: () => request("/api/cards"),
   createCard: (card) => request("/api/cards", json("POST", card)),

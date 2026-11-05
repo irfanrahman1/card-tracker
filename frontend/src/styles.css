@@ -371,3 +371,55 @@ h2 { font-size: 17px; font-weight: 650; }
   .panel-head .filters { width: 100%; }
   .panel-head .filters .select { flex: 1; min-width: 0; }
 }
+
+/* ---------- Login screen ---------- */
+.auth {
+  display: grid; grid-template-columns: 1.1fr 1fr; column-gap: 32px; align-content: center;
+  grid-template-areas: "pitch form" "details form"; min-height: calc(100vh - 48px); padding: 24px 0;
+}
+.auth-pitch { grid-area: pitch; align-self: end; }
+.auth-details { grid-area: details; align-self: start; }
+.auth-form { grid-area: form; align-self: center; }
+.auth-headline { font-size: 32px; font-weight: 750; letter-spacing: -0.02em; margin: 22px 0 16px; line-height: 1.15; }
+.auth-points { padding-left: 18px; margin: 0 0 22px; color: var(--text-2); display: grid; gap: 8px; }
+.auth-points strong { color: var(--text); }
+.auth-privacy { background: var(--surface-2); border-radius: 12px; padding: 14px 16px; font-size: 14px; }
+.auth-privacy-title { font-weight: 650; margin-bottom: 6px; }
+.auth-privacy ul { margin: 0; padding-left: 18px; color: var(--text-2); display: grid; gap: 4px; }
+.auth-form { padding: 22px; }
+.auth-tabs { display: flex; gap: 4px; background: var(--surface-2); padding: 4px; border-radius: 10px; margin-bottom: 16px; }
+.auth-tabs button { flex: 1; border: 0; background: transparent; padding: 8px; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--text-2); }
+.auth-tabs button.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.password-row { display: flex; gap: 6px; }
+.auth-or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; margin: 16px 0; }
+.auth-or::before, .auth-or::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.demo-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 10px 14px; border-radius: 12px; background: var(--surface-2); margin-bottom: 14px; font-size: 14px;
+}
+
+/* ---------- Account menu + dialogs ---------- */
+.account { position: relative; }
+.account-button { display: flex; align-items: center; gap: 8px; padding: 6px 10px; }
+.avatar { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, #2a78d6, #6250d6); color: #fff; font-size: 13px; font-weight: 700; }
+.account-email { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.menu {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; min-width: 220px; padding: 6px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 10px 30px rgb(0 0 0 / 0.18);
+  display: flex; flex-direction: column;
+}
+.menu-head { padding: 6px 10px 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; }
+.menu button { text-align: left; border: 0; background: transparent; padding: 9px 10px; border-radius: 8px; cursor: pointer; }
+.menu button:hover { background: var(--surface-2); }
+.menu button.danger, .btn.danger { color: var(--bad); }
+.btn.danger-solid { background: var(--bad); color: #fff; border-color: var(--bad); }
+.overlay { position: fixed; inset: 0; z-index: 60; background: rgb(0 0 0 / 0.45); display: grid; place-items: center; padding: 16px; }
+.dialog { width: 100%; max-width: 420px; display: grid; gap: 12px; }
+.dialog p { margin: 0; }
+
+@media (max-width: 760px) {
+  .auth { grid-template-columns: 1fr; grid-template-areas: "pitch" "form" "details"; row-gap: 16px; min-height: 0; }
+  .auth-headline { margin-bottom: 0; }
+  .auth-headline { font-size: 26px; }
+  .account-email { display: none; }
+}

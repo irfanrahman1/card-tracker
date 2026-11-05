@@ -1,4 +1,4 @@
-"""Monthly spending summary and the best-card recommendation."""
+"""Monthly spending summary, best-card recommendation and wallet optimizer, for the logged-in user."""
 from collections import defaultdict
 from datetime import date
 
@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from .. import models, schemas
 from ..categories import CATEGORIES, normalize_category
+from ..auth import current_user
 from ..database import get_db
 from ..catalog import catalog_cards, display_name
 from ..optimizer import suggest
@@ -30,16 +31,17 @@ def card_filter(rows, card: str | None):
 
 
 @router.get("/summary")
-def monthly_summary(month: str | None = None, card: str | None = None, db: Session = Depends(get_db)):
+def monthly_summary(month: str | None = None, card: str | None = None, db: Session = Depends(get_db),
+                    user: models.User = Depends(current_user)):
     """Spending by category for one month ('YYYY-MM'), for all cards or one `card`.
 
     Defaults to the most recent month that has purchases. Also reports, for purchases
     made with a known card, the rewards earned vs. what the best card would have earned,
     and (for all cards) each card's spending and rewards side by side.
     """
-    all_transactions = db.scalars(select(models.Transaction)).all()
+    all_transactions = db.scalars(select(models.Transaction).where(models.Transaction.user_id == user.id)).all()
     transactions = card_filter(all_transactions, card)
-    cards = db.scalars(select(models.Card)).all()
+    cards = db.scalars(select(models.Card).where(models.Card.user_id == user.id)).all()
     cards_by_id = {c.id: c for c in cards}
 
     # Month choices come from every purchase, so switching cards keeps the same list.
@@ -102,10 +104,11 @@ def monthly_summary(month: str | None = None, card: str | None = None, db: Sessi
 
 
 @router.get("/summary/trend")
-def monthly_trend(card: str | None = None, db: Session = Depends(get_db)):
+def monthly_trend(card: str | None = None, db: Session = Depends(get_db), user: models.User = Depends(current_user)):
     """Spending by category for every month, oldest first (for a chart). Optional `card`."""
     totals = defaultdict(lambda: {c: 0.0 for c in CATEGORIES})
-    for t in card_filter(db.scalars(select(models.Transaction)).all(), card):
+    rows = db.scalars(select(models.Transaction).where(models.Transaction.user_id == user.id)).all()
+    for t in card_filter(rows, card):
         totals[t.date.strftime("%Y-%m")][t.category] += t.amount
     return [
         {"month": m, **{c: round(v, 2) for c, v in totals[m].items()}}
@@ -119,12 +122,13 @@ def recommend(
     category: str | None = None,
     merchant: str = "",
     db: Session = Depends(get_db),
+    user: models.User = Depends(current_user),
 ):
     """Best card for a purchase. Give a category, or a merchant to guess it from."""
     if not category and not merchant:
         raise HTTPException(400, "Provide a category or a merchant")
     resolved = normalize_category(category, merchant)
-    cards = db.scalars(select(models.Card)).all()
+    cards = db.scalars(select(models.Card).where(models.Card.user_id == user.id)).all()
     ranked = rank_cards(cards, resolved, amount)
     return {
         "category": resolved,
@@ -136,13 +140,13 @@ def recommend(
 
 # ---------- Wallet optimizer ----------
 
-def yearly_spending(db: Session) -> tuple[dict[str, float], int]:
+def yearly_spending(db: Session, user: models.User) -> tuple[dict[str, float], int]:
     """Your spending per category over the last 12 months with data, scaled to a year.
 
     Returns (spending, months_of_data). With 3 months of data, totals are x4.
     Refunds are netted in; a category that nets negative counts as $0.
     """
-    rows = db.scalars(select(models.Transaction)).all()
+    rows = db.scalars(select(models.Transaction).where(models.Transaction.user_id == user.id)).all()
     months = sorted({t.date.strftime("%Y-%m") for t in rows}, reverse=True)[:12]
     if not months:
         return {c: 0.0 for c in CATEGORIES}, 0
@@ -197,15 +201,16 @@ def _catalog_as_dicts(points_cents: float, spending: dict[str, float]) -> list[d
 
 
 @router.post("/optimizer")
-def optimize(payload: schemas.OptimizerIn | None = None, db: Session = Depends(get_db)):
+def optimize(payload: schemas.OptimizerIn | None = None, db: Session = Depends(get_db),
+             user: models.User = Depends(current_user)):
     """Yearly value of your cards, and which cards would add the most.
 
     Uses your real spending (last 12 months, scaled to a year) unless you pass
     `spending` to try a what-if. Catalog points cards are valued at `point_value` cents.
     """
     payload = payload or schemas.OptimizerIn()
-    real_spending, months = yearly_spending(db)
+    real_spending, months = yearly_spending(db, user)
     spending = {c: max(float(payload.spending.get(c, 0)), 0) for c in CATEGORIES} if payload.spending else real_spending
-    owned = _owned_as_dicts(db.scalars(select(models.Card)).all())
+    owned = _owned_as_dicts(db.scalars(select(models.Card).where(models.Card.user_id == user.id)).all())
     result = suggest(owned, _catalog_as_dicts(payload.point_value, spending), spending)
     return {"spending": spending, "months_of_data": months, "what_if": bool(payload.spending), **result}

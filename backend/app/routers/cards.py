@@ -1,9 +1,10 @@
-"""Endpoints for credit cards and their reward rules."""
+"""Endpoints for credit cards and their reward rules. Every route is for the logged-in user only."""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
+from ..auth import current_user
 from ..catalog import catalog_cards, display_name, find_card
 from ..database import get_db
 
@@ -30,21 +31,11 @@ def _apply(card: models.Card, payload: schemas.CardIn) -> None:
     card.rules = _rules_from(payload)  # replace all rules with the submitted set
 
 
-@router.get("/catalog")
-def list_catalog():
-    """Popular cards you can add in one click (see app/catalog/cards.json)."""
-    return catalog_cards()
-
-
-@router.post("/from-catalog/{catalog_id}", response_model=schemas.CardOut, status_code=201)
-def add_from_catalog(catalog_id: str, choice: str | None = None, db: Session = Depends(get_db)):
-    """Add a catalog card to your wallet with its rules, fee and point type filled in.
+def card_from_catalog(spec: dict, user: models.User, choice: str | None = None) -> models.Card:
+    """A new (unsaved) card for `user` built from a catalog entry.
 
     Cards where you pick a bonus category (e.g. BofA Customized Cash) take `choice`.
     """
-    spec = find_card(catalog_id)
-    if not spec:
-        raise HTTPException(404, "Unknown catalog card")
     rules = list(spec["rules"])
     if spec.get("choice"):
         pick = choice or spec["choice"]["default"]
@@ -60,8 +51,33 @@ def add_from_catalog(catalog_id: str, choice: str | None = None, db: Session = D
         catalog_id=spec["id"],
         rules=[schemas.RewardRuleIn(**{f: r[f] for f in RULE_FIELDS if f in r}) for r in rules],
     )
-    card = models.Card()
+    card = models.Card(user_id=user.id)
     _apply(card, payload)
+    return card
+
+
+def get_own_card(db: Session, user: models.User, card_id: int) -> models.Card:
+    """A card by id, but only if it belongs to this user (otherwise 404, as if it didn't exist)."""
+    card = db.get(models.Card, card_id)
+    if not card or card.user_id != user.id:
+        raise HTTPException(404, "Card not found")
+    return card
+
+
+@router.get("/catalog")
+def list_catalog():
+    """Popular cards you can add in one click (see app/catalog/cards.json). Public."""
+    return catalog_cards()
+
+
+@router.post("/from-catalog/{catalog_id}", response_model=schemas.CardOut, status_code=201)
+def add_from_catalog(catalog_id: str, choice: str | None = None, db: Session = Depends(get_db),
+                     user: models.User = Depends(current_user)):
+    """Add a catalog card to your wallet with its rules, fee and point type filled in."""
+    spec = find_card(catalog_id)
+    if not spec:
+        raise HTTPException(404, "Unknown catalog card")
+    card = card_from_catalog(spec, user, choice)
     db.add(card)
     db.commit()
     db.refresh(card)
@@ -69,13 +85,13 @@ def add_from_catalog(catalog_id: str, choice: str | None = None, db: Session = D
 
 
 @router.get("", response_model=list[schemas.CardOut])
-def list_cards(db: Session = Depends(get_db)):
-    return db.scalars(select(models.Card).order_by(models.Card.name)).all()
+def list_cards(db: Session = Depends(get_db), user: models.User = Depends(current_user)):
+    return db.scalars(select(models.Card).where(models.Card.user_id == user.id).order_by(models.Card.name)).all()
 
 
 @router.post("", response_model=schemas.CardOut, status_code=201)
-def create_card(payload: schemas.CardIn, db: Session = Depends(get_db)):
-    card = models.Card()
+def create_card(payload: schemas.CardIn, db: Session = Depends(get_db), user: models.User = Depends(current_user)):
+    card = models.Card(user_id=user.id)
     _apply(card, payload)
     db.add(card)
     db.commit()
@@ -84,10 +100,9 @@ def create_card(payload: schemas.CardIn, db: Session = Depends(get_db)):
 
 
 @router.put("/{card_id}", response_model=schemas.CardOut)
-def update_card(card_id: int, payload: schemas.CardIn, db: Session = Depends(get_db)):
-    card = db.get(models.Card, card_id)
-    if not card:
-        raise HTTPException(404, "Card not found")
+def update_card(card_id: int, payload: schemas.CardIn, db: Session = Depends(get_db),
+                user: models.User = Depends(current_user)):
+    card = get_own_card(db, user, card_id)
     _apply(card, payload)
     db.commit()
     db.refresh(card)
@@ -95,9 +110,7 @@ def update_card(card_id: int, payload: schemas.CardIn, db: Session = Depends(get
 
 
 @router.delete("/{card_id}", status_code=204)
-def delete_card(card_id: int, db: Session = Depends(get_db)):
-    card = db.get(models.Card, card_id)
-    if not card:
-        raise HTTPException(404, "Card not found")
+def delete_card(card_id: int, db: Session = Depends(get_db), user: models.User = Depends(current_user)):
+    card = get_own_card(db, user, card_id)
     db.delete(card)
     db.commit()

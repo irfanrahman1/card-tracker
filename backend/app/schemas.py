@@ -119,3 +119,28 @@ class TransactionUpdate(BaseModel):
 class AssignCardIn(BaseModel):
     card_id: int
     only_without_card: bool = True  # leave purchases that already have a card alone
+
+
+# ---------- Accounts ----------
+
+class CredentialsIn(BaseModel):
+    email: str = Field(max_length=254)
+    password: str = Field(max_length=128)
+
+
+class PasswordIn(BaseModel):
+    """Confirms it's really you before something sensitive (like deleting your account)."""
+
+    password: str = Field(max_length=128)
+
+
+class ChangePasswordIn(BaseModel):
+    current_password: str = Field(max_length=128)
+    new_password: str = Field(max_length=128)
+
+
+class UserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    email: str
+    is_demo: bool

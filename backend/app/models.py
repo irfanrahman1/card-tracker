@@ -1,10 +1,45 @@
-"""Database tables."""
-from datetime import date
+"""Database tables.
 
-from sqlalchemy import Date, Float, ForeignKey, String
+Every card, purchase and category rule belongs to one user (user_id), and every
+query filters by the logged-in user, so people never see each other's data.
+"""
+from datetime import UTC, date, datetime
+
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
+class User(Base):
+    """An account. Only an email is stored, never the password itself."""
+
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String(254), unique=True)  # stored lowercase
+    # Argon2 hash of the password (a one-way scramble that can't be reversed).
+    password_hash: Mapped[str] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    # Demo accounts are throwaway sample accounts, deleted after a day.
+    is_demo: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class LoginSession(Base):
+    """A logged-in browser. The cookie holds a random token; only its SHA-256 hash is
+    stored, so a leaked database can't be used to log in as anyone."""
+
+    __tablename__ = "login_sessions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
 
 
 class Card(Base):
@@ -13,6 +48,8 @@ class Card(Base):
     __tablename__ = "cards"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    # Owner. (Nullable only so older databases can be upgraded; see auth.claim_legacy_data.)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=True)
     name: Mapped[str] = mapped_column(String(100))
     issuer: Mapped[str] = mapped_column(String(100), default="")
     # Rates are "per dollar": 3.0 = 3% cash back, or 3 points per dollar.
@@ -61,6 +98,7 @@ class Transaction(Base):
     __tablename__ = "transactions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=True)
     date: Mapped[date] = mapped_column(Date)
     merchant: Mapped[str] = mapped_column(String(200))
     description: Mapped[str] = mapped_column(String(300), default="")
@@ -80,8 +118,12 @@ class Transaction(Base):
 class MerchantRule(Base):
     """A category the user chose for a merchant; applied to future imports of that merchant."""
 
-    __tablename__ = "merchant_rules"
+    # New table name: the old "merchant_rules" table had one global rule per merchant,
+    # but each user needs their own. Old rules are copied over (see auth.claim_legacy_data).
+    __tablename__ = "category_rules"
+    __table_args__ = (UniqueConstraint("user_id", "merchant"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    merchant: Mapped[str] = mapped_column(String(200), unique=True)  # lowercased merchant name
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=True)
+    merchant: Mapped[str] = mapped_column(String(200))  # lowercased merchant name
     category: Mapped[str] = mapped_column(String(30))

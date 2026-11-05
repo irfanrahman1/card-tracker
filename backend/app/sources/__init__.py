@@ -11,7 +11,7 @@ with it from a new route. Nothing else needs to change.
 """
 from .base import TransactionSource
 from .csv_source import CSVSource
-from .demo import DEMO_CARDS, DemoSource
+from .demo import DEMO_CARD_IDS, DemoSource
 from .manual import ManualSource
 
-__all__ = ["TransactionSource", "CSVSource", "DemoSource", "DEMO_CARDS", "ManualSource"]
+__all__ = ["TransactionSource", "CSVSource", "DemoSource", "DEMO_CARD_IDS", "ManualSource"]

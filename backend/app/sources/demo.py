@@ -5,18 +5,8 @@ from datetime import date, timedelta
 from ..schemas import TransactionIn
 from .base import TransactionSource
 
-# Made-up cards (not real products) with typical reward structures.
-DEMO_CARDS = [
-    {"name": "Dining Rewards Card", "issuer": "Demo Bank", "base_rate": 1,
-     "rules": [{"category": "food", "rate": 4}, {"category": "groceries", "rate": 3}]},
-    {"name": "Everyday 2% Card", "issuer": "Demo Bank", "base_rate": 2, "rules": []},
-    {"name": "Online Shopping Card", "issuer": "Demo Credit Union", "base_rate": 1,
-     "rules": [{"category": "shopping", "rate": 5}, {"category": "subscriptions", "rate": 3}]},
-    {"name": "Commuter Card", "issuer": "Demo Credit Union", "base_rate": 1,
-     "rules": [{"category": "transportation", "rate": 3}]},
-    {"name": "Travel Rewards Card", "issuer": "Demo Bank", "base_rate": 1,
-     "rules": [{"category": "travel", "rate": 5}, {"category": "food", "rate": 2}]},
-]
+# Popular cards from the catalog (catalog/cards.json) for the demo wallet.
+DEMO_CARD_IDS = ["amex-gold", "chase-freedom-unlimited", "citi-double-cash", "amex-blue-cash-preferred"]
 
 # (merchant, low $, high $, how often). No categories given: the app guesses them.
 DEMO_MERCHANTS = [
@@ -33,7 +23,8 @@ class DemoSource(TransactionSource):
 
     def __init__(self, card_ids: list[int], today: date | None = None, count: int = 90):
         self.card_ids = card_ids
-        self.today = today or date.today()
+        # Sample purchases end on the last day of last month, so the demo opens on a full month.
+        self.today = today or (date.today().replace(day=1) - timedelta(days=1))
         self.count = count
 
     def fetch(self) -> list[TransactionIn]:
@@ -45,8 +36,9 @@ class DemoSource(TransactionSource):
                 date=self.today - timedelta(days=rng.randint(0, 89)),
                 merchant=merchant,
                 amount=round(rng.uniform(low, high), 2),
-                # Some purchases use no recorded card, like real life.
-                card_id=rng.choice(self.card_ids + [None]) if self.card_ids else None,
+                # Random card, so some purchases use the "wrong" one and the app can show
+                # what the best card would have earned.
+                card_id=rng.choice(self.card_ids) if self.card_ids else None,
                 external_id=f"demo-{i}",  # lets "Load demo data" run twice without duplicates
             ))
         return results

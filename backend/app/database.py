@@ -8,8 +8,18 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 # DATABASE_URL environment variable (see .env.example).
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./card_tracker.db")
 
-# check_same_thread=False lets FastAPI use the connection from its worker threads.
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+# Hosts often hand out "postgres://..." URLs; SQLAlchemy wants a driver name.
+if DATABASE_URL.startswith(("postgres://", "postgresql://")):
+    DATABASE_URL = "postgresql+psycopg://" + DATABASE_URL.split("://", 1)[1]
+
+IS_SQLITE = DATABASE_URL.startswith("sqlite")
+# check_same_thread=False lets FastAPI use a SQLite connection from its worker threads.
+# pool_pre_ping reconnects if a hosted Postgres closed an idle connection.
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={"check_same_thread": False} if IS_SQLITE else {},
+    pool_pre_ping=not IS_SQLITE,
+)
 SessionLocal = sessionmaker(bind=engine, autoflush=False)
 
 

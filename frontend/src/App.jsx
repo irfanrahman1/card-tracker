@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { api } from "./api.js";
+import { AUTH_REQUIRED, api } from "./api.js";
+import AccountMenu from "./components/AccountMenu.jsx";
+import AuthScreen from "./components/AuthScreen.jsx";
 import Overview from "./components/Overview.jsx";
 import BestCard from "./components/BestCard.jsx";
 import Purchases from "./components/Purchases.jsx";
@@ -15,12 +17,13 @@ const TABS = [
 ];
 
 export default function App() {
+  // undefined = still checking, null = logged out, object = logged-in user
+  const [user, setUser] = useState(undefined);
   const [tab, setTab] = useState("overview");
   // Bumped after any change to the data; views re-fetch when it changes.
   const [dataVersion, setDataVersion] = useState(0);
   const [toast, setToast] = useState(null);
   const [backendUp, setBackendUp] = useState(true);
-  const [busy, setBusy] = useState(false);
 
   const refresh = useCallback(() => setDataVersion((v) => v + 1), []);
 
@@ -34,40 +37,61 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [toast]);
 
+  // Who's logged in? And go back to the login screen if the session ends.
+  useEffect(() => {
+    api.me().then(setUser).catch(() => setUser(null));
+    const onLoggedOut = () => setUser(null);
+    window.addEventListener(AUTH_REQUIRED, onLoggedOut);
+    return () => window.removeEventListener(AUTH_REQUIRED, onLoggedOut);
+  }, []);
+
   // Check the backend is reachable, so a stopped server shows a clear message.
   useEffect(() => {
     fetch("/api/health")
       .then((r) => setBackendUp(r.ok))
       .catch(() => setBackendUp(false));
-  }, [dataVersion]);
+  }, [dataVersion, user]);
+
+  const signedIn = (u) => {
+    setUser(u);
+    setTab("overview");
+    refresh();
+  };
 
   const loadDemo = async () => {
-    setBusy(true);
     try {
       const res = await api.loadDemo();
       notify(
         res.transactions_added
-          ? `Loaded ${res.cards} demo cards and ${res.transactions_added} purchases`
-          : "Demo data is already loaded"
+          ? `Loaded ${res.cards} sample cards and ${res.transactions_added} purchases`
+          : "Sample data is already loaded"
       );
       refresh();
     } catch (err) {
       notify(err.message, "error");
-    } finally {
-      setBusy(false);
     }
   };
 
-  const clearAll = async () => {
-    if (!window.confirm("Delete ALL cards and purchases? This can't be undone.")) return;
-    try {
-      await api.clearAll();
-      notify("All data cleared");
-      refresh();
-    } catch (err) {
-      notify(err.message, "error");
-    }
-  };
+  const backendBanner = !backendUp && (
+    <div className="banner" role="alert">
+      <span>
+        <strong>Can't reach the server.</strong> If you're running it yourself, start it with{" "}
+        <code>./start.sh</code>.
+      </span>
+      <button className="btn small" onClick={refresh}>Retry</button>
+    </div>
+  );
+
+  if (user === undefined) return <div className="app"><div className="panel muted" style={{ marginTop: 24 }}>Loading…</div></div>;
+
+  if (!user) {
+    return (
+      <div className="app">
+        {backendBanner}
+        <AuthScreen onSignedIn={signedIn} />
+      </div>
+    );
+  }
 
   // Props every view gets.
   const shared = { dataVersion, refresh, notify, loadDemo, goTo: setTab };
@@ -79,23 +103,19 @@ export default function App() {
           <div className="brand-logo" aria-hidden="true" />
           <h1>Card Tracker</h1>
         </div>
-        <div className="top-actions">
-          <button className="btn primary" onClick={loadDemo} disabled={busy}>
-            ⚡<span className="btn-label"> Load demo data</span>
-          </button>
-          <button className="btn ghost" onClick={clearAll} title="Clear all data">
-            🗑️<span className="btn-label"> Clear</span>
-          </button>
-        </div>
+        <AccountMenu user={user} onLoggedOut={() => setUser(null)} refresh={refresh} notify={notify} />
       </header>
 
-      {!backendUp && (
-        <div className="banner" role="alert">
+      {backendBanner}
+
+      {user.is_demo && (
+        <div className="demo-banner">
           <span>
-            <strong>Can't reach the backend.</strong> Start it with{" "}
-            <code>uvicorn app.main:app --reload</code> in the <code>backend</code> folder.
+            <strong>You're in a demo account</strong> with sample data. It's deleted after 24 hours.
           </span>
-          <button className="btn small" onClick={refresh}>Retry</button>
+          <button className="btn small primary" onClick={() => api.logout().finally(() => setUser(null))}>
+            Create your own account
+          </button>
         </div>
       )}
 
