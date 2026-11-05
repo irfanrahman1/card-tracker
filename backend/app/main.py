@@ -2,8 +2,11 @@
 import os
 from urllib.parse import urlsplit
 
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import event
 
 from . import models  # noqa: F401  (imported so the tables are registered)
@@ -50,6 +53,14 @@ async def security(request: Request, call_next):
     response.headers["Referrer-Policy"] = "same-origin"
     if request.url.path.startswith("/api/"):
         response.headers["Cache-Control"] = "no-store"  # personal data isn't cached
+    else:
+        # The website may only load its own scripts and styles, and talk only to its own API.
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; "
+            "connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        )
+    if request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000"  # HTTPS only from now on
     return response
 
 
@@ -68,3 +79,23 @@ def list_categories():
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+
+# ---------- The website (production) ----------
+# In production the built React app (frontend/dist) is copied to STATIC_DIR and served
+# by this same server, so the website and API share one address. In development, Vite
+# serves the website instead and this folder doesn't exist.
+STATIC_DIR = Path(os.environ.get("STATIC_DIR", Path(__file__).resolve().parent.parent / "static"))
+
+if STATIC_DIR.is_dir():
+    app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="assets")
+
+    @app.get("/{path:path}", include_in_schema=False)
+    def website(path: str):
+        """Any non-API address loads the app (React handles the rest)."""
+        if path.startswith("api/"):
+            raise HTTPException(404, "Not found")
+        file = (STATIC_DIR / path).resolve()
+        if path and file.is_file() and STATIC_DIR.resolve() in file.parents:
+            return FileResponse(file)
+        return FileResponse(STATIC_DIR / "index.html")

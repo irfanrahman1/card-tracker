@@ -5,6 +5,7 @@ by category, and get a "best card for this purchase" recommendation.
 
 - **Backend:** FastAPI + SQLite (via SQLAlchemy)
 - **Frontend:** React + Vite (mobile-responsive; tabs become a bottom bar on phones)
+- **Hosting:** one Docker container (website + API) with Postgres. Free on Koyeb + Neon; see [DEPLOY.md](DEPLOY.md)
 - Accounts with email + password; each person's data is private. No Plaid (yet): the code is structured so it can be added as another transaction source.
 
 ## Build status
@@ -17,8 +18,8 @@ by category, and get a "best card for this purchase" recommendation.
 | 4 | Real bank CSVs, 8 categories, refunds, fix-a-category | ✅ |
 | 5 | Card catalog, point values, fees/perks, wallet optimizer, tests | ✅ |
 | 6 | Accounts (sign up / log in), privacy, demo account, Postgres-ready | ✅ |
-| 7 | Bank linking with Plaid (sandbox) | ⏳ |
-| 8 | Deploy: Docker, hosting, installable on phones | ⏳ |
+| 7 | Deploy: one Docker container, Postgres (Neon), free hosting (Koyeb) | ✅ |
+| 8 | Bank linking with Plaid (sandbox) | ⏳ |
 | 9 | CI, architecture docs, demo | ⏳ |
 
 ## Quick start (macOS)
@@ -44,6 +45,8 @@ card-tracker/
 ├── .gitignore
 ├── README.md
 ├── start.sh              # one command: installs + starts backend and frontend
+├── Dockerfile            # production: builds the website, runs the API (serves both)
+├── DEPLOY.md             # how to put it online for free
 ├── sample-data/
 │   └── purchases.csv     # example CSV to try the upload
 └── backend/
@@ -151,6 +154,9 @@ source venv/bin/activate
 pip install -r requirements-dev.txt
 python -m pytest
 ```
+
+To run the same tests against Postgres (like production), set
+`TEST_DATABASE_URL=postgresql://...` to an empty test database first.
 
 ## Accounts, security and privacy
 
