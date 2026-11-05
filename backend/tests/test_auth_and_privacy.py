@@ -195,3 +195,9 @@ def test_signing_up_twice_does_not_block_logging_in():
     for _ in range(6):
         client.post("/api/auth/signup", json={"email": "twice@example.com", "password": PASSWORD})
     assert client.post("/api/auth/login", json={"email": "twice@example.com", "password": PASSWORD}).status_code == 200
+
+
+def test_live_site_says_so_when_email_is_not_set_up(monkeypatch):
+    monkeypatch.setenv("VERCEL", "1")
+    r = new_client().post("/api/auth/forgot-password", json={"email": "anyone@example.com"})
+    assert r.status_code == 503 and "aren't set up" in r.json()["detail"]

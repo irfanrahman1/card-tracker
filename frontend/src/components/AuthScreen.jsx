@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api.js";
 
 // The first screen for anyone not logged in: what the app does, how data is
@@ -10,6 +10,13 @@ export default function AuthScreen({ onSignedIn }) {
   // "signup" | "login" | "forgot" (ask for a reset link) | "reset" (choose a new password)
   const [mode, setMode] = useState(resetToken ? "reset" : "signup");
   const [info, setInfo] = useState("");
+  // Seconds until "Resend email" can be clicked again (so the link can't be spammed).
+  const [cooldown, setCooldown] = useState(0);
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -34,7 +41,10 @@ export default function AuthScreen({ onSignedIn }) {
       setBusy(true);
       setError("");
       api.forgotPassword(email)
-        .then((r) => setInfo(r.message))
+        .then((r) => {
+          setInfo(`${r.message} Check your inbox and spam folder; the link works for 30 minutes.`);
+          setCooldown(60);
+        })
         .catch((err) => setError(err.message))
         .finally(() => setBusy(false));
       return;
@@ -54,6 +64,7 @@ export default function AuthScreen({ onSignedIn }) {
     setMode(next);
     setError("");
     setInfo("");
+    setCooldown(0);
   };
 
   return (
@@ -131,8 +142,12 @@ export default function AuthScreen({ onSignedIn }) {
           )}
           {error && <div className="notice bad" style={{ marginTop: 0 }} role="alert">{error}</div>}
           {info && <div className="notice good" style={{ marginTop: 0 }} role="status">{info}</div>}
-          <button className="btn primary" disabled={busy || (mode === "forgot" && info)}>
-            {busy ? "One moment…" : { signup: "Create account", login: "Log in", forgot: "Send reset link", reset: "Save new password" }[mode]}
+          <button className="btn primary" disabled={busy || (mode === "forgot" && cooldown > 0)}>
+            {busy
+              ? "One moment…"
+              : mode === "forgot" && info
+                ? (cooldown > 0 ? `Resend email in ${cooldown}s` : "Resend email")
+                : { signup: "Create account", login: "Log in", forgot: "Send reset link", reset: "Save new password" }[mode]}
           </button>
           {(mode === "forgot" || mode === "reset") && (
             <button type="button" className="btn ghost" onClick={() => switchTo("login")}>← Back to log in</button>

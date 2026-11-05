@@ -120,6 +120,11 @@ APP_URL = os.environ.get("APP_URL", "http://localhost:5173").rstrip("/")
 def forgot_password(payload: schemas.ForgotPasswordIn, request: Request, db: Session = Depends(get_db)):
     """Email a one-time reset link. Always gives the same answer, so it doesn't reveal
     whether an email has an account."""
+    # On the live site, say so plainly if email isn't set up yet, instead of pretending
+    # a link was sent. (Locally the link is printed in the terminal, so it still works.)
+    if not emailer.is_configured() and os.environ.get("VERCEL"):
+        raise HTTPException(503, "Password reset emails aren't set up on this site yet. "
+                                 "Please contact the site owner.")
     email = (payload.email or "").strip().lower()
     keys = (f"reset-ip:{auth.client_ip(request)}", f"reset-email:{email}")
     limiter.check(db, *keys)
