@@ -84,9 +84,16 @@ class LoginLimiter:
     runs as many short-lived copies (serverless) or restarts.
     """
 
-    def __init__(self, max_failures: int = 5, window_seconds: int = 15 * 60):
-        self.max_failures = max_failures
+    # How many failures each kind of key allows per window. Per email stays strict (it's
+    # what protects one account from password guessing); per network is looser, because
+    # many people can share one address (a college or office Wi-Fi).
+    LIMITS = {"email": 5, "ip": 20, "signup-ip": 20, "reset-email": 5, "reset-ip": 20, "demo": 10}
+
+    def __init__(self, window_seconds: int = 15 * 60):
         self.window = timedelta(seconds=window_seconds)
+
+    def limit_for(self, key: str) -> int:
+        return self.LIMITS.get(key.split(":", 1)[0], 5)
 
     @staticmethod
     def _hash(key: str) -> str:
@@ -97,8 +104,9 @@ class LoginLimiter:
         for key in keys:
             count = db.scalar(select(func.count()).select_from(models.FailedAttempt).where(
                 models.FailedAttempt.key_hash == self._hash(key), models.FailedAttempt.at > since))
-            if count >= self.max_failures:
-                raise HTTPException(429, "Too many attempts. Wait 15 minutes and try again.")
+            if count >= self.limit_for(key):
+                raise HTTPException(429, "Too many attempts. Wait 15 minutes and try again. "
+                                         "Forgot your password? Use \"Forgot password?\" on the Log in tab.")
 
     def failed(self, db: Session, *keys: str) -> None:
         for key in keys:

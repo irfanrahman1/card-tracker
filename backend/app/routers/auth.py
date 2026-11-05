@@ -18,7 +18,8 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 @router.post("/signup", response_model=schemas.UserOut, status_code=201)
 def signup(payload: schemas.CredentialsIn, request: Request, response: Response, db: Session = Depends(get_db)):
     """Create an account and log in. Needs only an email and a password."""
-    ip = f"ip:{auth.client_ip(request)}"
+    # Its own counter, so trying to sign up twice doesn't count against logging in.
+    ip = f"signup-ip:{auth.client_ip(request)}"
     limiter.check(db, ip)
     email = auth.normalize_email(payload.email)
     auth.check_new_password(payload.password, email)

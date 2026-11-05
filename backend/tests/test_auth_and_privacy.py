@@ -129,9 +129,9 @@ def test_demo_account_has_sample_data():
 def test_faked_forwarded_for_header_does_not_dodge_the_limit():
     signup("spoof@example.com")
     attacker = new_client()
-    for i in range(5):
+    for i in range(20):  # the per-network limit, spread over many emails
         attacker.post("/api/auth/login", headers={"X-Forwarded-For": f"10.0.0.{i}"},
-                      json={"email": "someone-else@example.com", "password": "guess guess guess"})
+                      json={"email": f"someone-{i}@example.com", "password": "guess guess guess"})
     # Same real address, new fake header and a different email: still blocked by IP.
     r = attacker.post("/api/auth/login", headers={"X-Forwarded-For": "10.9.9.9"},
                       json={"email": "spoof@example.com", "password": PASSWORD})
@@ -177,3 +177,21 @@ def test_reset_logs_out_other_devices(capsys):
 def test_expired_or_fake_reset_links_fail():
     r = new_client().post("/api/auth/reset-password", json={"token": "x" * 43, "new_password": "a brand new password"})
     assert r.status_code == 400
+
+
+def test_shared_wifi_is_not_locked_out_by_one_persons_typos():
+    signup("classmate@example.com")
+    typo_person = new_client()
+    for _ in range(5):  # one person locks only their own email...
+        typo_person.post("/api/auth/login", json={"email": "typo@example.com", "password": "wrong password!!"})
+    # ...someone else on the same network can still log in.
+    r = new_client().post("/api/auth/login", json={"email": "classmate@example.com", "password": PASSWORD})
+    assert r.status_code == 200
+
+
+def test_signing_up_twice_does_not_block_logging_in():
+    signup("twice@example.com")
+    client = new_client()
+    for _ in range(6):
+        client.post("/api/auth/signup", json={"email": "twice@example.com", "password": PASSWORD})
+    assert client.post("/api/auth/login", json={"email": "twice@example.com", "password": PASSWORD}).status_code == 200

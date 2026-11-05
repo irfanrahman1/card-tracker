@@ -171,7 +171,7 @@ and `backend/app/routers/auth.py`.
 | Passwords never stored | Argon2id hashes (salted, deliberately slow). Login errors don't reveal whether an email has an account, and take the same time either way. |
 | Sessions can't be stolen by page scripts | A random 256-bit token in an `HttpOnly`, `SameSite=Lax` cookie (`Secure` over HTTPS). Only its SHA-256 hash is stored, so a leaked database can't be used to log in. |
 | Private data | Every card, purchase and category rule has an owner (`user_id`); every query filters by the logged-in user, and other people's ids return 404. Covered by `tests/test_auth_and_privacy.py`. |
-| Brute force | 5 failed logins per IP or email in 15 minutes blocks further tries for a while, tracked in the database (only hashed keys) so it holds across servers. Forwarded-for headers are only trusted from the host's own proxy, so faking them doesn't help. |
+| Brute force | 5 failed logins per email, or 20 per network (shared Wi-Fi friendly), in 15 minutes blocks further tries for a while. Tracked in the database (only hashed keys) so it holds across servers. Forwarded-for headers are only trusted from the host's own proxy, so faking them doesn't help. |
 | Cross-site attacks | No CORS; state-changing requests from other websites are rejected (Origin check) on top of SameSite cookies. Security headers: `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Cache-Control: no-store` on the API. |
 | Minimal data | Only an email. Never card numbers. |
 | Leave anytime | Account menu: delete all my data, or delete the account and everything in it. Changing the password logs out other devices. |
