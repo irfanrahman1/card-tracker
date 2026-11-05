@@ -29,6 +29,18 @@ class User(Base):
     is_demo: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
+class FailedAttempt(Base):
+    """A failed login (or a demo/sign-up attempt), for brute-force limits. Stored in the
+    database so the limit holds across servers and restarts. The key is a hash of
+    "ip:..." or "email:...", so no raw addresses or emails are kept here."""
+
+    __tablename__ = "failed_attempts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    key_hash: Mapped[str] = mapped_column(String(64), index=True)
+    at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, index=True)
+
+
 class LoginSession(Base):
     """A logged-in browser. The cookie holds a random token; only its SHA-256 hash is
     stored, so a leaked database can't be used to log in as anyone."""

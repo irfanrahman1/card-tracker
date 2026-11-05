@@ -2,6 +2,7 @@
 import os
 
 from sqlalchemy import create_engine
+from sqlalchemy.pool import NullPool
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 # Defaults to a local file next to where you start the server. Override with the
@@ -15,10 +16,16 @@ if DATABASE_URL.startswith(("postgres://", "postgresql://")):
 IS_SQLITE = DATABASE_URL.startswith("sqlite")
 # check_same_thread=False lets FastAPI use a SQLite connection from its worker threads.
 # pool_pre_ping reconnects if a hosted Postgres closed an idle connection.
+# On serverless hosts (Vercel) each copy of the app is short-lived, so connections
+# aren't kept in a pool; Neon's own connection pooler does that job instead.
+# prepare_threshold=None turns off server-side prepared statements, which connection
+# poolers in "transaction" mode can't always handle.
+SERVERLESS = bool(os.environ.get("VERCEL"))
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False} if IS_SQLITE else {},
+    connect_args={"check_same_thread": False} if IS_SQLITE else {"prepare_threshold": None},
     pool_pre_ping=not IS_SQLITE,
+    **({"poolclass": NullPool} if SERVERLESS and not IS_SQLITE else {}),
 )
 SessionLocal = sessionmaker(bind=engine, autoflush=False)
 

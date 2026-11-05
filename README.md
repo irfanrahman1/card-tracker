@@ -5,7 +5,7 @@ by category, and get a "best card for this purchase" recommendation.
 
 - **Backend:** FastAPI + SQLite (via SQLAlchemy)
 - **Frontend:** React + Vite (mobile-responsive; tabs become a bottom bar on phones)
-- **Hosting:** one Docker container (website + API) with Postgres. Free on Koyeb + Neon; see [DEPLOY.md](DEPLOY.md)
+- **Hosting:** free on Vercel (website on the CDN, API as a Python function) + Neon Postgres; a Dockerfile is included for container hosts. See [DEPLOY.md](DEPLOY.md)
 - Accounts with email + password; each person's data is private. No Plaid (yet): the code is structured so it can be added as another transaction source.
 
 ## Build status
@@ -18,7 +18,7 @@ by category, and get a "best card for this purchase" recommendation.
 | 4 | Real bank CSVs, 8 categories, refunds, fix-a-category | ✅ |
 | 5 | Card catalog, point values, fees/perks, wallet optimizer, tests | ✅ |
 | 6 | Accounts (sign up / log in), privacy, demo account, Postgres-ready | ✅ |
-| 7 | Deploy: one Docker container, Postgres (Neon), free hosting (Koyeb) | ✅ |
+| 7 | Deploy: Vercel + Neon Postgres (free), Dockerfile for other hosts | ✅ |
 | 8 | Bank linking with Plaid (sandbox) | ⏳ |
 | 9 | CI, architecture docs, demo | ⏳ |
 
@@ -45,7 +45,9 @@ card-tracker/
 ├── .gitignore
 ├── README.md
 ├── start.sh              # one command: installs + starts backend and frontend
-├── Dockerfile            # production: builds the website, runs the API (serves both)
+├── vercel.json           # Vercel: build, routing, security headers
+├── api/index.py          # Vercel entry point for the API
+├── Dockerfile            # container hosts: builds the website, runs the API (serves both)
 ├── DEPLOY.md             # how to put it online for free
 ├── sample-data/
 │   └── purchases.csv     # example CSV to try the upload
@@ -169,7 +171,7 @@ and `backend/app/routers/auth.py`.
 | Passwords never stored | Argon2id hashes (salted, deliberately slow). Login errors don't reveal whether an email has an account, and take the same time either way. |
 | Sessions can't be stolen by page scripts | A random 256-bit token in an `HttpOnly`, `SameSite=Lax` cookie (`Secure` over HTTPS). Only its SHA-256 hash is stored, so a leaked database can't be used to log in. |
 | Private data | Every card, purchase and category rule has an owner (`user_id`); every query filters by the logged-in user, and other people's ids return 404. Covered by `tests/test_auth_and_privacy.py`. |
-| Brute force | 5 failed logins per IP or email in 15 minutes blocks further tries for a while (in memory, per server). Forwarded-for headers are only trusted from the host's own proxy, so faking them doesn't help. |
+| Brute force | 5 failed logins per IP or email in 15 minutes blocks further tries for a while, tracked in the database (only hashed keys) so it holds across servers. Forwarded-for headers are only trusted from the host's own proxy, so faking them doesn't help. |
 | Cross-site attacks | No CORS; state-changing requests from other websites are rejected (Origin check) on top of SameSite cookies. Security headers: `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Cache-Control: no-store` on the API. |
 | Minimal data | Only an email. Never card numbers. |
 | Leave anytime | Account menu: delete all my data, or delete the account and everything in it. Changing the password logs out other devices. |
@@ -178,7 +180,7 @@ and `backend/app/routers/auth.py`.
 first account you create, so your cards and purchases carry over.
 
 **Production settings** (environment variables, never in code): `DATABASE_URL`
-(Postgres), `COOKIE_SECURE=true`, `ALLOWED_ORIGINS`, `TRUSTED_PROXY_HOPS=1` (behind the host's proxy).
+(Postgres), `COOKIE_SECURE=true`, `TRUSTED_PROXY_HOPS=1` (behind the host's proxy).
 
 ## Concepts
 

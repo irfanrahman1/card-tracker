@@ -23,7 +23,9 @@ def signup(email):
 
 @pytest.fixture(autouse=True)
 def fresh_limiter():
-    auth.limiter.failures.clear()
+    with SessionLocal() as db:
+        db.query(models.FailedAttempt).delete()
+        db.commit()
 
 
 def test_signup_login_logout():

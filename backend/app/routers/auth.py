@@ -17,11 +17,11 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 def signup(payload: schemas.CredentialsIn, request: Request, response: Response, db: Session = Depends(get_db)):
     """Create an account and log in. Needs only an email and a password."""
     ip = f"ip:{auth.client_ip(request)}"
-    limiter.check(ip)
+    limiter.check(db, ip)
     email = auth.normalize_email(payload.email)
     auth.check_new_password(payload.password, email)
     if db.scalar(select(models.User).where(models.User.email == email)):
-        limiter.failed(ip)  # stops anyone probing many emails quickly
+        limiter.failed(db, ip)  # stops anyone probing many emails quickly
         raise HTTPException(409, "An account with this email already exists. Try logging in.")
     first_real_user = not db.scalar(select(func.count()).select_from(models.User).where(models.User.is_demo.is_(False)))
     user = models.User(email=email, password_hash=auth.hash_password(payload.password))
@@ -39,14 +39,14 @@ def login(payload: schemas.CredentialsIn, request: Request, response: Response, 
     doesn't reveal who has an account."""
     email = (payload.email or "").strip().lower()
     keys = (f"ip:{auth.client_ip(request)}", f"email:{email}")
-    limiter.check(*keys)
+    limiter.check(db, *keys)
     user = db.scalar(select(models.User).where(models.User.email == email, models.User.is_demo.is_(False)))
     # Check a dummy hash when there's no such user, so both cases take the same time.
     ok = auth.verify_password(user.password_hash if user else auth._DUMMY_HASH, payload.password)
     if not (user and ok):
-        limiter.failed(*keys)
+        limiter.failed(db, *keys)
         raise HTTPException(401, "Email or password is incorrect")
-    limiter.succeeded(*keys)
+    limiter.succeeded(db, *keys)
     auth.start_session(db, response, user)
     return user
 
@@ -66,8 +66,8 @@ def me(user: models.User = Depends(current_user)):
 def try_demo(request: Request, response: Response, db: Session = Depends(get_db)):
     """A throwaway account with sample cards and purchases. Deleted after 24 hours."""
     ip = f"demo:{auth.client_ip(request)}"
-    limiter.check(ip)
-    limiter.failed(ip)  # counts toward a limit so one visitor can't create thousands
+    limiter.check(db, ip)
+    limiter.failed(db, ip)  # counts toward a limit so one visitor can't create thousands
     auth.delete_expired(db)
     user = models.User(email=f"demo-{secrets.token_hex(6)}@demo.local",
                        password_hash=auth.hash_password(secrets.token_urlsafe(24)), is_demo=True)

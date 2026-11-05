@@ -9,20 +9,18 @@ How it keeps people safe:
   - Every data route depends on current_user(), and every query filters by that
     user's id, so one account can never read another's cards or purchases.
   - Repeated failed logins from the same address or for the same email are blocked
-    for a while (brute-force protection).
+    for a while (brute-force protection), tracked in the database.
 """
 import hashlib
 import os
 import re
 import secrets
-import time
-from collections import defaultdict, deque
 from datetime import UTC, datetime, timedelta
 
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
 from fastapi import Depends, HTTPException, Request, Response
-from sqlalchemy import inspect, select, text, update
+from sqlalchemy import func, inspect, select, text, update
 from sqlalchemy.orm import Session
 
 from . import models
@@ -82,32 +80,35 @@ def normalize_email(email: str) -> str:
 class LoginLimiter:
     """Blocks an IP address or email after too many failed logins in a time window.
 
-    Kept in memory: simple, and fine for one server. (Several servers would need a
-    shared store like Redis.)
+    Failures are kept in the database (hashed), so the limit works even when the app
+    runs as many short-lived copies (serverless) or restarts.
     """
 
     def __init__(self, max_failures: int = 5, window_seconds: int = 15 * 60):
         self.max_failures = max_failures
-        self.window = window_seconds
-        self.failures: dict[str, deque] = defaultdict(deque)
+        self.window = timedelta(seconds=window_seconds)
 
-    def _recent(self, key: str) -> deque:
-        q = self.failures[key]
-        while q and q[0] < time.time() - self.window:
-            q.popleft()
-        return q
+    @staticmethod
+    def _hash(key: str) -> str:
+        return hashlib.sha256(key.encode()).hexdigest()
 
-    def check(self, *keys: str) -> None:
-        if any(len(self._recent(k)) >= self.max_failures for k in keys):
-            raise HTTPException(429, "Too many attempts. Wait 15 minutes and try again.")
+    def check(self, db: Session, *keys: str) -> None:
+        since = utcnow() - self.window
+        for key in keys:
+            count = db.scalar(select(func.count()).select_from(models.FailedAttempt).where(
+                models.FailedAttempt.key_hash == self._hash(key), models.FailedAttempt.at > since))
+            if count >= self.max_failures:
+                raise HTTPException(429, "Too many attempts. Wait 15 minutes and try again.")
 
-    def failed(self, *keys: str) -> None:
-        for k in keys:
-            self._recent(k).append(time.time())
+    def failed(self, db: Session, *keys: str) -> None:
+        for key in keys:
+            db.add(models.FailedAttempt(key_hash=self._hash(key)))
+        db.commit()
 
-    def succeeded(self, *keys: str) -> None:
-        for k in keys:
-            self.failures.pop(k, None)
+    def succeeded(self, db: Session, *keys: str) -> None:
+        hashes = [self._hash(k) for k in keys]
+        db.query(models.FailedAttempt).filter(models.FailedAttempt.key_hash.in_(hashes)).delete(synchronize_session=False)
+        db.commit()
 
 
 limiter = LoginLimiter()
@@ -174,6 +175,7 @@ def delete_expired(db: Session) -> None:
     """Remove expired sessions and demo accounts older than a day (with all their data)."""
     now = utcnow()
     db.query(models.LoginSession).filter(models.LoginSession.expires_at < now).delete()
+    db.query(models.FailedAttempt).filter(models.FailedAttempt.at < now - timedelta(days=1)).delete()
     old_demos = db.scalars(select(models.User).where(
         models.User.is_demo.is_(True), models.User.created_at < now - timedelta(hours=DEMO_HOURS))).all()
     for user in old_demos:

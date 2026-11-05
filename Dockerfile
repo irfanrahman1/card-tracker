@@ -1,5 +1,5 @@
 # One container for the whole app: builds the React website, then runs the
-# Python API, which also serves the website. Used by the host (Koyeb) to deploy.
+# Python API, which also serves the website. For container hosts (Cloud Run, Render...).
 
 # ---- 1. Build the website ----
 FROM node:22-slim AS frontend
