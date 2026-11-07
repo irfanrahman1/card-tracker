@@ -13,5 +13,6 @@ from .base import TransactionSource
 from .csv_source import CSVSource
 from .demo import DEMO_CARD_IDS, DemoSource
 from .manual import ManualSource
+from .pdf import PDFSource
 
-__all__ = ["TransactionSource", "CSVSource", "DemoSource", "DEMO_CARD_IDS", "ManualSource"]
+__all__ = ["TransactionSource", "CSVSource", "DemoSource", "DEMO_CARD_IDS", "ManualSource", "PDFSource"]
