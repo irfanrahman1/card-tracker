@@ -1,5 +1,7 @@
 # Card Tracker
 
+![Tests](https://github.com/irfanrahman1/card-tracker/actions/workflows/tests.yml/badge.svg)
+
 **See where your money goes, and which credit card earns you the most.**
 
 Live: **https://card-tracker-three-steel.vercel.app** (click **Try the demo**, no sign-up needed)
