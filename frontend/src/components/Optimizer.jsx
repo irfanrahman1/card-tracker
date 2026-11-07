@@ -44,7 +44,7 @@ export default function Optimizer({ dataVersion, refresh, notify, goTo }) {
     <div className="grid">
       {noData && (
         <div className="notice info" style={{ marginTop: 0 }}>
-          No purchases yet, so these numbers are empty. Upload a CSV, load the demo data, or type
+          No purchases yet, so these numbers are empty. Upload a statement, load the demo data, or type
           your yearly spending below to try it.
         </div>
       )}

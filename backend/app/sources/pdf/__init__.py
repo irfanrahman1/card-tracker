@@ -25,10 +25,11 @@ def pick_parser(text, parsers=None):
 class PDFSource(TransactionSource):
     name = "pdf"
 
-    def __init__(self, content, default_card_id=None, parsers=None):
+    def __init__(self, content, default_card_id=None, parsers=None, leave_out=None):
         self.content = content
         self.default_card_id = default_card_id
         self.parsers = parsers
+        self.leave_out = leave_out or set()  # ids of rows the user unticked on the review screen
         self.parser_name = ""
         self.skipped = []
         self.warnings = []  # problems found by the totals check
@@ -60,6 +61,8 @@ class PDFSource(TransactionSource):
             key = f"{row['date']}|{row['description'].lower()}|{row['amount']:.2f}"
             counts[key] = counts.get(key, 0) + 1
             external_id = hashlib.sha1(f"{key}|{counts[key]}".encode()).hexdigest()[:16]
+            if external_id in self.leave_out:
+                continue
 
             results.append(TransactionIn(
                 date=row["date"],

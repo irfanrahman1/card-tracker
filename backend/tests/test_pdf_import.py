@@ -120,3 +120,18 @@ def test_no_balances_on_statement_means_not_checked():
     source = PDFSource(FAKE_STATEMENT)  # it has a New Balance but no Previous Balance
     source.fetch()
     assert not source.totals_checked
+
+
+def test_reference_numbers_before_the_merchant_are_dropped():
+    # made-up lines in the layout Robinhood uses: date, date, reference number, merchant, amount
+    source = PDFSource(make_pdf([
+        "Statement Closing Date  July 14, 2026",
+        "06/21  06/21  2480197HWP4KGVTAV  TRIBECA DELICIOUS BITES NEW YORK NY      15.78",
+        "07/11  07/11  2469216JGBWPDQD6W  TST*OLD DHAKA COFFEE HOU Beacon NY        7.28",
+        "07/12  07/12  1234 MAIN STREET DELI  NEW YORK NY                           9.50",
+    ]))
+    assert [r.merchant for r in source.fetch()] == [
+        "TRIBECA DELICIOUS BITES NEW YORK NY",
+        "TST*OLD DHAKA COFFEE HOU Beacon NY",
+        "1234 MAIN STREET DELI NEW YORK NY",  # a short street number is kept
+    ]
