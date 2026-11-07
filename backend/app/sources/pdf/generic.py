@@ -30,6 +30,11 @@ WITH_AMOUNT = re.compile(rf"^(.*?[A-Za-z].*?)\s+({AMOUNT})\s*[^\w\s]*\s*$", re.I
 # a line that's only an amount, e.g. "$900.93" or "-$23.94 ⧫"
 ONLY_AMOUNT = re.compile(rf"^\s*({AMOUNT})\s*[^\w\s]*\s*$", re.IGNORECASE)
 
+# some banks (like Robinhood) print a reference number in front of the merchant:
+# "2480197HWP4KGVTAV TRIBECA DELICIOUS BITES" -> we drop the number.
+# A reference number = 10+ capital letters/digits with at least 3 digits in it.
+REFERENCE_NUMBER = re.compile(r"^(?=(?:\S*\d){3})[A-Z0-9]{10,}\s+")
+
 LOOK_AHEAD = 12  # how many lines down we look for the amount
 
 # summary lines on the statement that can look like purchases
@@ -81,6 +86,7 @@ def parse(lines, skipped):
                 continue
 
         description = " ".join(description.split())
+        description = REFERENCE_NUMBER.sub("", description)
         i = last_line + 1
 
         if any(word in description.lower() for word in SKIP_WORDS):
