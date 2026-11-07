@@ -26,3 +26,6 @@ dist/
 *.csv
 !sample-data/*.csv
 .pytest_cache/
+
+# Statements have personal data: never commit them
+*.pdf
