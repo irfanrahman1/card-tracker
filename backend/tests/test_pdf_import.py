@@ -66,3 +66,57 @@ def test_bank_parser_is_used_when_it_matches():
 def test_pdf_with_no_purchases():
     with pytest.raises(ValueError, match="Couldn't find any purchases"):
         PDFSource(make_pdf(["Hello, this page has no purchases on it."])).fetch()
+
+
+# A made-up bank that wraps long descriptions and puts the amount on its own line
+WRAPPED = make_pdf([
+    "Other Bank Rewards Card",
+    "Previous Balance                                      $200.00",
+    "New Balance                                           $550.50",
+    "11/02/26  CITY HARDWARE STORE",
+    "          BROOKLYN NY",
+    "          $45.50",
+    "11/05/26  SOME AIRLINE",
+    "          Ticket 123  Departs 01/04",
+    "          $310.00",
+    "11/09/26  ONLINE PAYMENT THANK YOU",
+    "          -$100.00",
+    "11/12/26  COFFEE PLACE  NEW YORK NY      $95.00",
+])
+
+
+def test_amount_on_a_line_below_the_date():
+    source = PDFSource(WRAPPED)
+    rows = source.fetch()
+    assert [(r.date, r.merchant, r.amount) for r in rows] == [
+        (date(2026, 11, 2), "CITY HARDWARE STORE", 45.50),
+        (date(2026, 11, 5), "SOME AIRLINE", 310.00),
+        (date(2026, 11, 12), "COFFEE PLACE NEW YORK NY", 95.00),
+    ]
+    assert source.skipped == ["ONLINE PAYMENT THANK YOU: card payment, not a purchase"]
+
+
+def test_balance_check_passes_when_everything_adds_up():
+    # 45.50 + 310.00 + 95.00 - 100.00 = 350.50, and 550.50 - 200.00 = 350.50
+    source = PDFSource(WRAPPED)
+    source.fetch()
+    assert source.totals_checked
+    assert source.warnings == []
+
+
+def test_balance_check_warns_when_something_is_missing():
+    source = PDFSource(make_pdf([
+        "Previous Balance $200.00",
+        "New Balance $350.50",
+        "11/12/26  COFFEE PLACE  NEW YORK NY      $95.00",
+    ]))
+    source.fetch()
+    assert source.warnings == [
+        "Everything we read adds up to $95.00, but the balance changed by $150.50. Some purchases may be missing."
+    ]
+
+
+def test_no_balances_on_statement_means_not_checked():
+    source = PDFSource(FAKE_STATEMENT)  # it has a New Balance but no Previous Balance
+    source.fetch()
+    assert not source.totals_checked
