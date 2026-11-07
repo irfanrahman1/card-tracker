@@ -6,3 +6,4 @@ SQLAlchemy==2.1.6
 python-multipart==0.0.32
 argon2-cffi==25.1.0
 psycopg[binary]==3.3.8
+pypdf==6.21.4
