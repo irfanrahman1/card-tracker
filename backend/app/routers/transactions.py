@@ -6,8 +6,9 @@ from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..auth import current_user
 from ..database import get_db
-from ..ingest import save_from_source
-from ..sources import CSVSource, ManualSource
+from ..categories import clean_merchant
+from ..ingest import pick_category, save_from_source
+from ..sources import CSVSource, ManualSource, PDFSource
 from .cards import get_own_card
 from .insights import card_filter
 
@@ -75,6 +76,82 @@ async def upload_csv(
     except ValueError as err:
         raise HTTPException(400, str(err))
     return {"imported": len(created), "skipped": source.skipped}
+
+
+async def read_pdf(file: UploadFile) -> bytes:
+    content = await file.read()
+    if len(content) > 5_000_000:
+        raise HTTPException(400, "File too large (max 5 MB)")
+    if not content.startswith(b"%PDF"):
+        raise HTTPException(400, "That file isn't a PDF.")
+    return content
+
+
+@router.post("/upload-pdf/preview")
+async def preview_pdf(
+    file: UploadFile = File(...),
+    card_id: int | None = Form(None),
+    db: Session = Depends(get_db),
+    user: models.User = Depends(current_user),
+):
+    """Read a PDF statement and show what would be imported. Nothing is saved yet:
+    the review screen shows this, then calls /upload-pdf to actually import."""
+    content = await read_pdf(file)
+    if card_id is not None:
+        get_own_card(db, user, card_id)
+    source = PDFSource(content, default_card_id=card_id)
+    try:
+        items = source.fetch()
+    except ValueError as err:
+        raise HTTPException(400, str(err))
+
+    # so the review screen can show which rows you've imported before, and the
+    # category each one will get (including categories you've fixed by hand before)
+    already = set(db.scalars(select(models.Transaction.external_id).where(
+        models.Transaction.user_id == user.id, models.Transaction.source == "pdf")))
+    rules = {r.merchant: r.category for r in db.scalars(
+        select(models.MerchantRule).where(models.MerchantRule.user_id == user.id))}
+
+    rows = []
+    for item in items:
+        merchant = clean_merchant(item.merchant)
+        rows.append({
+            "id": item.external_id,
+            "date": item.date,
+            "merchant": merchant,
+            "amount": item.amount,
+            "category": pick_category(item, merchant, rules, "pdf"),
+            "already_imported": item.external_id in already,
+        })
+    return {
+        "parser": source.parser_name,
+        "rows": rows,
+        "skipped": source.skipped,
+        "warnings": source.warnings,
+        "totals_checked": source.totals_checked,
+    }
+
+
+@router.post("/upload-pdf")
+async def import_pdf(
+    file: UploadFile = File(...),
+    card_id: int | None = Form(None),
+    leave_out: str = Form(""),
+    db: Session = Depends(get_db),
+    user: models.User = Depends(current_user),
+):
+    """Import a PDF statement after the review screen.
+    `leave_out`: comma-separated ids of rows you unticked."""
+    content = await read_pdf(file)
+    if card_id is not None:
+        get_own_card(db, user, card_id)
+    unticked = {i for i in leave_out.split(",") if i}
+    source = PDFSource(content, default_card_id=card_id, leave_out=unticked)
+    try:
+        created = save_from_source(db, source, user)
+    except ValueError as err:
+        raise HTTPException(400, str(err))
+    return {"imported": len(created), "skipped": source.skipped, "warnings": source.warnings}
 
 
 @router.post("/assign-card")

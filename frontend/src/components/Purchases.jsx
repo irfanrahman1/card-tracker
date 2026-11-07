@@ -4,7 +4,7 @@ import { CATEGORIES, categoryColor, categoryLabel, money, monthLabel, prettyMerc
 
 const EMPTY_FORM = { date: today(), merchant: "", amount: "", category: "", card_id: "" };
 
-// Add purchases by hand or from a CSV, and browse/delete them by month.
+// Add purchases by hand or from a CSV / PDF statement, and browse/delete them by month.
 export default function Purchases({ dataVersion, refresh, notify }) {
   const [cards, setCards] = useState([]);
   const [rows, setRows] = useState([]);
@@ -123,7 +123,7 @@ export default function Purchases({ dataVersion, refresh, notify }) {
           </form>
         </section>
 
-        <CsvUpload cards={cards} refresh={refresh} notify={notify} />
+        <StatementUpload cards={cards} refresh={refresh} notify={notify} />
       </div>
 
       <section className="panel">
@@ -184,22 +184,34 @@ export default function Purchases({ dataVersion, refresh, notify }) {
   );
 }
 
-// CSV upload box: click or drag a file in.
-function CsvUpload({ cards, refresh, notify }) {
+// Upload box for a CSV or a PDF statement: click or drag a file in.
+// CSVs are imported right away. PDFs show a review list first, and nothing is
+// saved until you click Import.
+function StatementUpload({ cards, refresh, notify }) {
   const inputRef = useRef(null);
   const [cardId, setCardId] = useState("");
   const [over, setOver] = useState(false);
   const [result, setResult] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [review, setReview] = useState(null); // { file, preview } while reviewing a PDF
+  const [unticked, setUnticked] = useState([]); // ids of rows not to import
 
   const upload = async (file) => {
     if (!file) return;
     setUploading(true);
     setResult(null);
+    setReview(null);
     try {
-      const res = await api.uploadCsv(file, cardId);
-      setResult({ ok: true, ...res });
-      if (res.imported) refresh();
+      if (file.name.toLowerCase().endsWith(".pdf")) {
+        const preview = await api.previewPdf(file, cardId);
+        setReview({ file, preview });
+        // rows you've imported before start unticked
+        setUnticked(preview.rows.filter((r) => r.already_imported).map((r) => r.id));
+      } else {
+        const res = await api.uploadCsv(file, cardId);
+        setResult({ ok: true, ...res });
+        if (res.imported) refresh();
+      }
     } catch (err) {
       setResult({ ok: false, error: err.message });
     } finally {
@@ -208,33 +220,113 @@ function CsvUpload({ cards, refresh, notify }) {
     }
   };
 
+  const toggle = (id) => {
+    if (unticked.includes(id)) setUnticked(unticked.filter((x) => x !== id));
+    else setUnticked([...unticked, id]);
+  };
+
+  const importReviewed = async () => {
+    setUploading(true);
+    try {
+      const res = await api.importPdf(review.file, cardId, unticked);
+      setResult({ ok: true, ...res });
+      setReview(null);
+      if (res.imported) refresh();
+    } catch (err) {
+      notify(err.message, "error");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const ticked = review ? review.preview.rows.filter((r) => !unticked.includes(r.id)) : [];
+
   return (
     <section className="panel">
       <div className="panel-head">
-        <h2>Upload a CSV</h2>
+        <h2>Upload a statement</h2>
       </div>
       <div className="field" style={{ marginBottom: 12 }}>
-        <label htmlFor="csv-card">Card for rows that don't name one</label>
+        <label htmlFor="csv-card">Card these purchases were made with</label>
         <select id="csv-card" className="select" value={cardId} onChange={(e) => setCardId(e.target.value)}>
           <option value="">None</option>
           {cards.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </div>
-      <div
-        className={`dropzone ${over ? "over" : ""}`}
-        onClick={() => inputRef.current?.click()}
-        onDragOver={(e) => { e.preventDefault(); setOver(true); }}
-        onDragLeave={() => setOver(false)}
-        onDrop={(e) => { e.preventDefault(); setOver(false); upload(e.dataTransfer.files[0]); }}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && inputRef.current?.click()}
-      >
-        <div style={{ fontSize: 26 }}>📄</div>
-        <div><strong>{uploading ? "Uploading…" : "Choose a CSV file"}</strong> or drag it here</div>
-        <div className="small muted">Needs columns: date, merchant (or description), amount</div>
-      </div>
-      <input ref={inputRef} type="file" accept=".csv,text/csv" hidden onChange={(e) => upload(e.target.files[0])} />
+
+      {!review && (
+        <div
+          className={`dropzone ${over ? "over" : ""}`}
+          onClick={() => inputRef.current?.click()}
+          onDragOver={(e) => { e.preventDefault(); setOver(true); }}
+          onDragLeave={() => setOver(false)}
+          onDrop={(e) => { e.preventDefault(); setOver(false); upload(e.dataTransfer.files[0]); }}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && inputRef.current?.click()}
+        >
+          <div style={{ fontSize: 26 }}>📄</div>
+          <div><strong>{uploading ? "Reading…" : "Choose a PDF or CSV"}</strong> or drag it here</div>
+          <div className="small muted">A PDF statement from your bank, or a CSV export</div>
+        </div>
+      )}
+      <input ref={inputRef} type="file" accept=".csv,text/csv,.pdf,application/pdf" hidden
+        onChange={(e) => upload(e.target.files[0])} />
+
+      {review && (
+        <div>
+          <p style={{ margin: "0 0 8px" }}>
+            <strong>{review.preview.rows.length} purchases</strong> found in {review.file.name}.
+            Untick any you don't want.
+          </p>
+
+          {review.preview.warnings.length > 0 ? (
+            <div className="notice bad">
+              The totals don't match the statement, so something may be missing or wrong:
+              <ul>{review.preview.warnings.map((w) => <li key={w}>{w}</li>)}</ul>
+            </div>
+          ) : review.preview.totals_checked ? (
+            <div className="notice good">✓ Totals match the statement.</div>
+          ) : (
+            <div className="notice info">We couldn't double-check this statement's totals, so give the list a quick look.</div>
+          )}
+
+          <div className="list review-list">
+            {review.preview.rows.map((r) => (
+              <label className="list-row review-row" key={r.id}>
+                <input type="checkbox" checked={!unticked.includes(r.id)} onChange={() => toggle(r.id)} />
+                <div className="row-main">
+                  <div className="row-title">{prettyMerchant(r.merchant)}</div>
+                  <div className="row-meta">
+                    <span>{new Date(r.date + "T00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                    <span className="chip">
+                      <span className="swatch" style={{ background: categoryColor(r.category) }} />
+                      {categoryLabel(r.category)}
+                    </span>
+                    {r.amount < 0 && <span className="refund">Refund / credit</span>}
+                    {r.already_imported && <span>Already imported</span>}
+                  </div>
+                </div>
+                <div className={`row-amount num ${r.amount < 0 ? "refund" : ""}`}>{money(r.amount)}</div>
+              </label>
+            ))}
+          </div>
+
+          {review.preview.skipped.length > 0 && (
+            <details className="small muted" style={{ marginTop: 8 }}>
+              <summary>Left out {review.preview.skipped.length} line{review.preview.skipped.length === 1 ? "" : "s"} (like card payments)</summary>
+              <ul>{review.preview.skipped.map((s, i) => <li key={i}>{s}</li>)}</ul>
+            </details>
+          )}
+
+          <div className="form-actions">
+            <button className="btn" onClick={() => setReview(null)} disabled={uploading}>Cancel</button>
+            <button className="btn primary" onClick={importReviewed} disabled={uploading || ticked.length === 0}>
+              {uploading ? "Importing…" : `Import ${ticked.length} purchase${ticked.length === 1 ? "" : "s"}`}
+            </button>
+          </div>
+        </div>
+      )}
 
       {result?.ok && (
         <div className={`notice ${result.imported ? "good" : "info"}`}>

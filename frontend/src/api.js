@@ -75,6 +75,21 @@ export const api = {
     if (cardId) form.append("card_id", cardId);
     return request("/api/transactions/upload", { method: "POST", body: form });
   },
+  // PDF statements: preview first (nothing is saved), then import.
+  // leaveOut = ids of rows unticked on the review screen.
+  previewPdf: (file, cardId) => {
+    const form = new FormData();
+    form.append("file", file);
+    if (cardId) form.append("card_id", cardId);
+    return request("/api/transactions/upload-pdf/preview", { method: "POST", body: form });
+  },
+  importPdf: (file, cardId, leaveOut) => {
+    const form = new FormData();
+    form.append("file", file);
+    if (cardId) form.append("card_id", cardId);
+    form.append("leave_out", leaveOut.join(","));
+    return request("/api/transactions/upload-pdf", { method: "POST", body: form });
+  },
 
   // Insights
   summary: (month, card) => {

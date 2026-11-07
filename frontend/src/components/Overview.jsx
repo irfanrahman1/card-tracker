@@ -99,7 +99,7 @@ export default function Overview({ dataVersion, refresh, loadDemo, goTo, notify 
             <>
               <div className="stat-value">—</div>
               <div className="stat-sub">
-                No purchases are linked to a card yet. Add your card, then pick it when uploading a CSV.
+                No purchases are linked to a card yet. Add your card, then pick it when uploading a statement.
               </div>
             </>
           ) : (
@@ -201,8 +201,8 @@ function SetupChecklist({ summary, goTo, refresh, notify }) {
         </div>
         <div className={`setup-step ${hasPurchases ? "done" : ""}`}>
           <span className="setup-num">{hasPurchases ? "✓" : 2}</span>
-          <span className="setup-text">Upload your card's CSV export (or add purchases by hand)</span>
-          {!hasPurchases && <button className="btn small primary" onClick={() => goTo("purchases")}>Upload CSV</button>}
+          <span className="setup-text">Upload your card's PDF statement or CSV export (or add purchases by hand)</span>
+          {!hasPurchases && <button className="btn small primary" onClick={() => goTo("purchases")}>Upload statement</button>}
         </div>
         <div className={`setup-step ${linked ? "done" : ""}`}>
           <span className="setup-num">{linked ? "✓" : 3}</span>
