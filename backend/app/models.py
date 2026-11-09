@@ -5,7 +5,7 @@ query filters by the logged-in user, so people never see each other's data.
 """
 from datetime import UTC, date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, String, UniqueConstraint
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -138,6 +138,24 @@ class Transaction(Base):
     source: Mapped[str] = mapped_column(String(20), default="manual")
     # The source's own id for this row (e.g. Plaid transaction_id), used to skip duplicates.
     external_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    # Which upload (CSV or PDF) this purchase came from, so a whole upload can be undone.
+    # Empty for purchases typed in by hand, demo data, and uploads from before this existed.
+    import_id: Mapped[int | None] = mapped_column(
+        ForeignKey("imports.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+
+
+class Import(Base):
+    """One uploaded file (CSV or PDF statement). Lets you undo a whole upload in one click."""
+
+    __tablename__ = "imports"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    filename: Mapped[str] = mapped_column(String(200), default="")
+    source: Mapped[str] = mapped_column(String(20))  # "csv" or "pdf"
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
+    count: Mapped[int] = mapped_column(Integer, default=0)  # purchases saved by this upload
 
 
 class MerchantRule(Base):

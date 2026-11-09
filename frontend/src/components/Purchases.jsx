@@ -123,7 +123,7 @@ export default function Purchases({ dataVersion, refresh, notify }) {
           </form>
         </section>
 
-        <StatementUpload cards={cards} refresh={refresh} notify={notify} />
+        <StatementUpload cards={cards} refresh={refresh} notify={notify} dataVersion={dataVersion} />
       </div>
 
       <section className="panel">
@@ -187,7 +187,7 @@ export default function Purchases({ dataVersion, refresh, notify }) {
 // Upload box for a CSV or a PDF statement: click or drag a file in.
 // CSVs are imported right away. PDFs show a review list first, and nothing is
 // saved until you click Import.
-function StatementUpload({ cards, refresh, notify }) {
+function StatementUpload({ cards, refresh, notify, dataVersion }) {
   const inputRef = useRef(null);
   const [cardId, setCardId] = useState("");
   const [over, setOver] = useState(false);
@@ -195,6 +195,25 @@ function StatementUpload({ cards, refresh, notify }) {
   const [uploading, setUploading] = useState(false);
   const [review, setReview] = useState(null); // { file, preview } while reviewing a PDF
   const [unticked, setUnticked] = useState([]); // ids of rows not to import
+  const [imports, setImports] = useState([]); // your recent uploads, newest first
+
+  // reload the list whenever purchases change (an upload, an undo, a deleted row...)
+  useEffect(() => {
+    api.listImports().then(setImports).catch(() => {});
+  }, [dataVersion]);
+
+  const undo = async (item) => {
+    const ok = window.confirm(`Delete the ${item.count} purchase${item.count === 1 ? "" : "s"} from ${item.filename}?`);
+    if (!ok) return;
+    try {
+      const res = await api.undoImport(item.id);
+      notify(`Deleted ${res.deleted} purchase${res.deleted === 1 ? "" : "s"} from ${item.filename}`);
+      setResult(null);
+      refresh();
+    } catch (err) {
+      notify(err.message, "error");
+    }
+  };
 
   const upload = async (file) => {
     if (!file) return;
@@ -342,6 +361,21 @@ function StatementUpload({ cards, refresh, notify }) {
         </div>
       )}
       {result && !result.ok && <div className="notice bad">{result.error}</div>}
+
+      {!review && imports.length > 0 && (
+        <div className="recent-imports">
+          <div className="small muted">Recent uploads</div>
+          {imports.map((item) => (
+            <div className="recent-import" key={item.id}>
+              <span className="small">
+                {item.filename || "Upload"} · {item.count} purchase{item.count === 1 ? "" : "s"} ·{" "}
+                {new Date(item.created_at + "Z").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+              </span>
+              <button className="btn ghost small" onClick={() => undo(item)}>Undo</button>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

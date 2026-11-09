@@ -52,6 +52,65 @@ def add_transaction(payload: schemas.TransactionIn, db: Session = Depends(get_db
     return save_from_source(db, ManualSource([payload]), user)[0]
 
 
+def start_import(db: Session, user: models.User, file: UploadFile, kind: str) -> models.Import:
+    """Make a record for this upload, so its purchases can point to it."""
+    upload = models.Import(user_id=user.id, filename=(file.filename or "")[:200], source=kind)
+    db.add(upload)
+    db.flush()  # gives upload an id without saving yet
+    return upload
+
+
+def finish_import(db: Session, upload: models.Import, created: list) -> None:
+    """Save how many purchases the upload added. An upload that added nothing
+    (everything was a duplicate) isn't worth listing, so it's removed."""
+    if created:
+        upload.count = len(created)
+    else:
+        db.delete(upload)
+    db.commit()
+
+
+@router.get("/imports")
+def list_imports(db: Session = Depends(get_db), user: models.User = Depends(current_user)):
+    """Your 10 most recent uploads, with how many of their purchases are still there."""
+    uploads = db.scalars(
+        select(models.Import)
+        .where(models.Import.user_id == user.id)
+        .order_by(models.Import.id.desc())
+        .limit(10)
+    ).all()
+
+    results = []
+    for upload in uploads:
+        # count what's left (you may have deleted some of its purchases by hand)
+        left = db.scalar(select(func.count()).where(
+            models.Transaction.user_id == user.id, models.Transaction.import_id == upload.id))
+        if left == 0:
+            continue  # nothing left to undo, so don't list it
+        results.append({
+            "id": upload.id,
+            "filename": upload.filename,
+            "source": upload.source,
+            "created_at": upload.created_at,
+            "count": left,
+        })
+    return results
+
+
+@router.delete("/imports/{import_id}")
+def undo_import(import_id: int, db: Session = Depends(get_db), user: models.User = Depends(current_user)):
+    """Delete every purchase that came from one upload. Nothing else is touched."""
+    upload = db.get(models.Import, import_id)
+    if not upload or upload.user_id != user.id:
+        raise HTTPException(404, "Import not found")
+    deleted = db.query(models.Transaction).filter(
+        models.Transaction.user_id == user.id, models.Transaction.import_id == upload.id,
+    ).delete(synchronize_session=False)
+    db.delete(upload)
+    db.commit()
+    return {"deleted": deleted}
+
+
 @router.post("/upload")
 async def upload_csv(
     file: UploadFile = File(...),
@@ -71,10 +130,12 @@ async def upload_csv(
         get_own_card(db, user, card_id)
     cards = db.scalars(select(models.Card).where(models.Card.user_id == user.id)).all()
     source = CSVSource(content, {c.name: c.id for c in cards}, default_card_id=card_id)
+    upload = start_import(db, user, file, "csv")
     try:
-        created = save_from_source(db, source, user)
+        created = save_from_source(db, source, user, import_id=upload.id)
     except ValueError as err:
         raise HTTPException(400, str(err))
+    finish_import(db, upload, created)
     return {"imported": len(created), "skipped": source.skipped}
 
 
@@ -147,10 +208,12 @@ async def import_pdf(
         get_own_card(db, user, card_id)
     unticked = {i for i in leave_out.split(",") if i}
     source = PDFSource(content, default_card_id=card_id, leave_out=unticked)
+    upload = start_import(db, user, file, "pdf")
     try:
-        created = save_from_source(db, source, user)
+        created = save_from_source(db, source, user, import_id=upload.id)
     except ValueError as err:
         raise HTTPException(400, str(err))
+    finish_import(db, upload, created)
     return {"imported": len(created), "skipped": source.skipped, "warnings": source.warnings}
 
 

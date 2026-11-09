@@ -91,6 +91,10 @@ export const api = {
     return request("/api/transactions/upload-pdf", { method: "POST", body: form });
   },
 
+  // Your recent uploads, and undoing one (deletes all its purchases).
+  listImports: () => request("/api/transactions/imports"),
+  undoImport: (id) => request(`/api/transactions/imports/${id}`, { method: "DELETE" }),
+
   // Insights
   summary: (month, card) => {
     const params = new URLSearchParams();

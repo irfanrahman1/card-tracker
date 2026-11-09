@@ -429,3 +429,8 @@ h2 { font-size: 17px; font-weight: 650; }
 .review-list { max-height: 360px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; padding: 0 10px; margin-top: 10px; }
 .review-row { cursor: pointer; grid-template-columns: auto 1fr auto; }
 .review-row input { width: 16px; height: 16px; flex-shrink: 0; }
+
+/* Recent uploads under the upload box, each with an Undo button */
+.recent-imports { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 10px; }
+.recent-import { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 0; }
+.recent-import .small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
