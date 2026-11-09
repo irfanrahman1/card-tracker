@@ -26,9 +26,11 @@ def pick_category(item, merchant: str, rules: dict[str, str], source_name: str) 
     return normalize_category(item.category, item.merchant, item.description)
 
 
-def save_from_source(db: Session, source: TransactionSource, user: models.User) -> list[models.Transaction]:
+def save_from_source(db: Session, source: TransactionSource, user: models.User,
+                     import_id: int | None = None) -> list[models.Transaction]:
     """Fetch from `source`, normalize each row, skip duplicates, and save for `user`.
 
+    `import_id`: the upload these rows come from (see models.Import), so it can be undone.
     Returns the newly created rows.
     """
     known_card_ids = set(db.scalars(select(models.Card.id).where(models.Card.user_id == user.id)))
@@ -62,6 +64,7 @@ def save_from_source(db: Session, source: TransactionSource, user: models.User) 
             card_id=item.card_id if item.card_id in known_card_ids else None,
             source=source.name,
             external_id=item.external_id,
+            import_id=import_id,
         )
         db.add(row)
         created.append(row)

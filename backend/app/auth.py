@@ -198,7 +198,8 @@ def delete_user_data(db: Session, user_id: int, sessions: bool = True) -> None:
     their login sessions too)."""
     card_ids = select(models.Card.id).where(models.Card.user_id == user_id)
     db.query(models.RewardRule).filter(models.RewardRule.card_id.in_(card_ids)).delete(synchronize_session=False)
-    tables = [models.Transaction, models.Card, models.MerchantRule] + (
+    # purchases before imports: purchases point to the upload they came from
+    tables = [models.Transaction, models.Import, models.Card, models.MerchantRule] + (
         [models.LoginSession, models.PasswordReset] if sessions else [])
     for model in tables:
         db.query(model).filter(model.user_id == user_id).delete(synchronize_session=False)
