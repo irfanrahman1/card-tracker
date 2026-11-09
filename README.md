@@ -10,7 +10,7 @@ Live: **https://card-tracker-three-steel.vercel.app** (click **Try the demo**, n
 
 ## What it does
 
-- **Tracks your spending.** Upload your card's CSV file, or add purchases by hand. Each purchase is sorted into a category (food, groceries, travel, subscriptions, and more). Tap a category to see every store and purchase.
+- **Tracks your spending.** Upload your card's PDF statement or CSV file, or add purchases by hand. PDFs show a review screen first, with a check that the totals match the statement. Each purchase is sorted into a category (food, groceries, travel, subscriptions, and more). Tap a category to see every store and purchase.
 - **Picks the best card.** Type a store and an amount, and it tells you which of your cards pays the most back.
 - **Finds a better setup.** Based on how you actually spend, it shows what your cards earn per year after fees, and which card would earn you more if you added it.
 - **Knows 18 popular cards.** Amex, Chase, Capital One, Citi, Discover, Bank of America, Apple, Robinhood and more. Pick yours and the reward rules fill in.
@@ -32,7 +32,7 @@ Main pieces of the code:
 | File | What it does |
 |---|---|
 | `backend/app/categories.py` | Decides each purchase's category from the store name |
-| `backend/app/sources/` | Ways purchases come in: CSV files, typed in by hand, sample data |
+| `backend/app/sources/` | Ways purchases come in: PDF statements, CSV files, typed in by hand, sample data |
 | `backend/app/recommendation.py` | Ranks your cards for one purchase |
 | `backend/app/optimizer.py` | Works out yearly rewards and which cards to add |
 | `backend/app/catalog/cards.json` | The 18 cards and their reward rules |
@@ -73,6 +73,5 @@ See [DEPLOY.md](DEPLOY.md) for the free setup on Vercel and Neon.
 
 ## What's next
 
-- Import PDF statements (many banks only give PDFs)
 - Link bank accounts automatically with Plaid
 - Track card perks and credits you haven't used yet
