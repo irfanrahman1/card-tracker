@@ -368,6 +368,128 @@
       "rules": [],
       "notes": "Also 5% on hotels and rental cars through Capital One Travel.",
       "source": "https://www.shopback.com/blog/finance/chase-freedom-unlimited-vs-citi-double-cash-vs-wells-fargo-active-cash-vs-capital-one-quicksilver-us-2026-flat-cashback"
+    },
+    {
+      "id": "chase-prime-visa",
+      "name": "Prime Visa",
+      "issuer": "Chase",
+      "reward_type": "cash",
+      "annual_fee": 0,
+      "base_rate": 1,
+      "rules": [
+        {
+          "category": "shopping",
+          "rate": 5,
+          "note": "5% at Amazon (and Whole Foods); counted here for all Shopping, so it's generous if you shop a lot outside Amazon"
+        },
+        {
+          "category": "food",
+          "rate": 2,
+          "note": "Restaurants"
+        },
+        {
+          "category": "transportation",
+          "rate": 2,
+          "note": "Local transit and commuting, including rideshare (and gas stations)"
+        }
+      ],
+      "notes": "Requires an Amazon Prime membership (about $139/yr), not counted as a fee here because most people who'd get this card already pay for Prime. Whole Foods groceries also earn 5%, but other groceries earn 1%, so Groceries isn't counted. 5% on Chase Travel too.",
+      "source": "https://creditcards.chase.com/cash-back-credit-cards/amazon-prime-rewards"
+    },
+    {
+      "id": "citi-costco-anywhere",
+      "name": "Costco Anywhere Visa",
+      "issuer": "Citi",
+      "reward_type": "cash",
+      "annual_fee": 0,
+      "base_rate": 1,
+      "rules": [
+        {
+          "category": "food",
+          "rate": 3,
+          "note": "Restaurants"
+        },
+        {
+          "category": "travel",
+          "rate": 3,
+          "note": "Eligible travel, including Costco Travel"
+        }
+      ],
+      "notes": "Requires a Costco membership (not counted as a fee). Also 5% on Costco gas and 4% on other gas/EV charging (up to $7k/yr combined) and 2% at Costco; not counted because Transportation here is mostly transit and Groceries covers more than Costco. Cash back comes once a year as a certificate.",
+      "source": "https://www.costcotravel.com/info/credit-card"
+    },
+    {
+      "id": "wells-fargo-autograph",
+      "name": "Autograph",
+      "issuer": "Wells Fargo",
+      "reward_type": "points",
+      "points_name": "Wells Fargo Rewards",
+      "annual_fee": 0,
+      "base_rate": 1,
+      "rules": [
+        {
+          "category": "food",
+          "rate": 3,
+          "note": "Restaurants"
+        },
+        {
+          "category": "travel",
+          "rate": 3,
+          "note": "Travel"
+        },
+        {
+          "category": "transportation",
+          "rate": 3,
+          "note": "Transit and gas stations"
+        },
+        {
+          "category": "subscriptions",
+          "rate": 3,
+          "note": "Popular streaming services and phone plans"
+        }
+      ],
+      "notes": "Groceries earn 1x.",
+      "source": "https://www.nerdwallet.com/reviews/credit-cards/wells-fargo-autograph"
+    },
+    {
+      "id": "capital-one-venture",
+      "name": "Venture",
+      "issuer": "Capital One",
+      "reward_type": "points",
+      "points_name": "Capital One miles",
+      "annual_fee": 95,
+      "base_rate": 2,
+      "rules": [],
+      "notes": "2x on everything; 5x on hotels, vacation rentals and rental cars booked through Capital One Travel (not counted). Not the Venture X, which has a $395 fee.",
+      "source": "https://www.nerdwallet.com/reviews/credit-cards/capital-one-venture"
+    },
+    {
+      "id": "citi-strata-premier",
+      "name": "Strata Premier",
+      "issuer": "Citi",
+      "reward_type": "points",
+      "points_name": "ThankYou Points",
+      "annual_fee": 95,
+      "base_rate": 1,
+      "rules": [
+        {
+          "category": "food",
+          "rate": 3,
+          "note": "Restaurants"
+        },
+        {
+          "category": "groceries",
+          "rate": 3,
+          "note": "Supermarkets"
+        },
+        {
+          "category": "travel",
+          "rate": 3,
+          "note": "Air travel and hotels; 10x on hotels, car rentals and attractions through CitiTravel.com"
+        }
+      ],
+      "notes": "Also 3x at gas stations and EV charging; not counted because Transportation here is mostly transit. The $100 yearly hotel benefit isn't counted unless you add it.",
+      "source": "https://www.nerdwallet.com/reviews/credit-cards/citi-strata-premier"
     }
   ]
 }
