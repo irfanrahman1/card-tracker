@@ -60,6 +60,9 @@ def test_categories_from_real_world_merchant_names():
         "KINGZ CONVENIENCE ASTORIA NY": "groceries",
         "KEY FOODS #1482 BEACON NY": "groceries",
         "GOLD ANNUAL SUBSCRIPTIO": "subscriptions",
+        "FSI*CONED BILL PAYMENT 800-752-6633 NY": "utilities",
+        "VERIZON WRLS P2000-01": "utilities",
+        "NATIONAL GRID": "utilities",
     }
     for merchant, expected in cases.items():
         assert normalize_category(None, merchant) == expected, merchant
@@ -68,4 +71,5 @@ def test_categories_from_real_world_merchant_names():
 def test_bank_category_label_is_used_and_prefixes_are_cleaned():
     assert normalize_category("Food & Drink", "SOME PLACE") == "food"
     assert normalize_category("Merchandise & Supplies-Groceries", "X") == "groceries"
+    assert normalize_category("Bills & Utilities", "X") == "utilities"
     assert clean_merchant("AplPay TST* JOE COFF") == "JOE COFF"

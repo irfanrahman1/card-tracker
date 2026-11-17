@@ -273,6 +273,15 @@
           "portion": 0.25,
           "valid_until": "2026-12-31",
           "note": "Q4 2026 (Oct-Dec): restaurants, entertainment, utilities. Up to $1,500, activation required"
+        },
+        {
+          "category": "utilities",
+          "rate": 5,
+          "cap": 1500,
+          "cap_group": "quarterly",
+          "portion": 0.25,
+          "valid_until": "2026-12-31",
+          "note": "Q4 2026: utilities are part of this quarter's 5% (shared $1,500 cap)"
         }
       ],
       "notes": "5% categories rotate every quarter and need activating; the optimizer counts them for one quarter of your spending.",

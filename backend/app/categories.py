@@ -13,7 +13,7 @@ import re
 # Order matters for display (and chart colors are assigned in this order).
 CATEGORIES = [
     "food", "transportation", "groceries", "shopping",
-    "travel", "subscriptions", "fees", "other",
+    "travel", "subscriptions", "utilities", "fees", "other",
 ]
 
 # Merchant-name keywords, matched as whole words, case-insensitive.
@@ -31,6 +31,11 @@ KEYWORDS = {
         "notion", "dropbox", "icloud", "google one", "adobe", "microsoft 365", "github",
         "entertainment credit", "digital entertainment", "nytimes", "new york times",
         "planet fitness", "equinox", "crunch fitness",
+    ],
+    "utilities": [
+        "coned", "con ed", "con edison", "consolidated edison", "national grid", "pseg", "pse&g",
+        "duke energy", "pg&e", "dominion energy", "eversource", "electric bill", "water bill",
+        "verizon", "t-mobile", "at&t", "mint mobile", "spectrum", "optimum", "xfinity", "comcast",
     ],
     "travel": [
         "booking.com", "expedia", "hotels.com", "airbnb", "vrbo", "hotel", "hotels", "inn", "resort",
@@ -88,6 +93,7 @@ BANK_LABELS = [
     ("transportation", ["gas", "fuel", "transport", "parking", "taxi", "rideshare", "transit",
                         "automotive", "toll"]),
     ("subscriptions", ["subscription", "streaming"]),
+    ("utilities", ["utilit", "phone", "internet", "cable"]),
     ("shopping", ["shopping", "merchandise", "retail", "department store", "clothing", "electronics",
                   "home improvement", "pharmac"]),
 ]
