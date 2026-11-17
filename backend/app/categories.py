@@ -27,6 +27,7 @@ KEYWORDS = {
         "netflix", "hulu", "disney plus", "disney+", "peacock", "max.com", "hbo max", "paramount+",
         "spotify", "apple.com/bill", "youtube premium", "youtube tv", "audible", "uber one",
         "walmart+", "dashpass", "openai", "chatgpt", "anthropic", "claude.ai", "walter ai",
+        "subscription", "subscriptio",  # statements cut long names off, e.g. "GOLD ANNUAL SUBSCRIPTIO"
         "notion", "dropbox", "icloud", "google one", "adobe", "microsoft 365", "github",
         "entertainment credit", "digital entertainment", "nytimes", "new york times",
         "planet fitness", "equinox", "crunch fitness",
@@ -53,12 +54,13 @@ KEYWORDS = {
         "heb", "h-e-b", "fairway", "key food", "food bazaar", "ctown", "c-town", "stop & shop",
         "shoprite", "h mart", "hmart", "sprouts", "food lion", "gristedes", "morton william",
         "morton williams", "morton willia", "instacart", "fresh direct", "freshdirect",
-        "trade fair", "bazar", "bazaar", "fruit", "frui", "produce", "mini mart", "mini ma", "conven",
+        "trade fair", "bazar", "bazaar", "fruit", "frui", "produce", "mini mart", "mini ma", "conven", "convenience", "key foods",
         "market", "marke", "mkt", "premium super",
     ],
     "food": [
         "restaurant", "restaura", "restaur", "restau", "cafe", "café", "coffee", "coff", "starbucks", "dunkin", "pizza",
         "burger", "bur", "grill", "deli", "delic", "halal", "kitchen", "taco", "tacos", "ramen",
+        "hala", "delicious", "bites", "shawarma", "chick", "canteen",  # "hala" = "halal" cut off
         "sushi", "thai", "pho", "noodle", "bakery", "bagel", "bagels", "bistro", "diner", "eatery",
         "bar", "pub", "tavern", "brewery", "chicken", "hot chi", "wings", "gyro", "kebab",
         "falafel", "dumpling", "poke", "boba", "tea", "mediterranean", "mokafe",

@@ -51,6 +51,15 @@ def test_categories_from_real_world_merchant_names():
         "AplPay TRADE FAIR #1": "groceries",
         "Amazon Fresh": "shopping",              # Amazon always counts as shopping
         "GOFUNDME": "other",
+        # from a real Robinhood statement, where these used to land in "other"
+        "TRIBECA DELICIOUS BITES NEW YORK NY": "food",
+        "MAHMOUD'S CORNER HALA Woodside NY": "food",  # "halal" cut off
+        "LAVA SHAWARMA NYC NEW YORK NY": "food",
+        "CHICK ROCKS(ASTORIA)": "food",
+        "CANTEEN HUNT VALLEY MD": "food",
+        "KINGZ CONVENIENCE ASTORIA NY": "groceries",
+        "KEY FOODS #1482 BEACON NY": "groceries",
+        "GOLD ANNUAL SUBSCRIPTIO": "subscriptions",
     }
     for merchant, expected in cases.items():
         assert normalize_category(None, merchant) == expected, merchant
