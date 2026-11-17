@@ -25,6 +25,7 @@
   --cat-shopping: #eda100;
   --cat-travel: #e87ba4;
   --cat-subscriptions: #008300;
+  --cat-utilities: #0d93a8;
   --cat-fees: #6250d6;
   --cat-other: #e34948;
 }
@@ -51,6 +52,7 @@
     --cat-shopping: #c98500;
     --cat-travel: #d55181;
     --cat-subscriptions: #008300;
+    --cat-utilities: #22a6bb;
     --cat-fees: #9085e9;
     --cat-other: #e66767;
   }
