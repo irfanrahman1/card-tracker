@@ -7,13 +7,15 @@ import BestCard from "./components/BestCard.jsx";
 import Purchases from "./components/Purchases.jsx";
 import Cards from "./components/Cards.jsx";
 import Optimizer from "./components/Optimizer.jsx";
+import Logo from "./components/Logo.jsx";
+import { CreditCard, LayoutDashboard, Receipt, Sparkles, Target } from "lucide-react";
 
 const TABS = [
-  { id: "overview", label: "Overview", icon: "📊" },
-  { id: "best", label: "Best card", icon: "✨" },
-  { id: "optimize", label: "Optimize", icon: "🎯" },
-  { id: "purchases", label: "Purchases", icon: "🧾" },
-  { id: "cards", label: "Cards", icon: "💳" },
+  { id: "overview", label: "Overview", Icon: LayoutDashboard },
+  { id: "best", label: "Best card", Icon: Sparkles },
+  { id: "optimize", label: "Optimize", Icon: Target },
+  { id: "purchases", label: "Purchases", Icon: Receipt },
+  { id: "cards", label: "Cards", Icon: CreditCard },
 ];
 
 export default function App() {
@@ -100,7 +102,7 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          <div className="brand-logo" aria-hidden="true" />
+          <Logo />
           <h1>Card Tracker</h1>
         </div>
         <AccountMenu user={user} onLoggedOut={() => setUser(null)} refresh={refresh} notify={notify} />
@@ -127,7 +129,7 @@ export default function App() {
             onClick={() => setTab(t.id)}
             aria-current={tab === t.id ? "page" : undefined}
           >
-            <span className="tab-icon" aria-hidden="true">{t.icon}</span>
+            <span className="tab-icon" aria-hidden="true"><t.Icon /></span>
             {t.label}
           </button>
         ))}

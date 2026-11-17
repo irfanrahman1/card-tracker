@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { FileUp, X } from "lucide-react";
 import { api } from "../api.js";
 import { CATEGORIES, categoryColor, categoryLabel, money, monthLabel, prettyMerchant, today } from "../categories.js";
 
@@ -106,7 +107,7 @@ export default function Purchases({ dataVersion, refresh, notify }) {
                 <label htmlFor="p-category">Category</label>
                 <select id="p-category" className="select" value={form.category} onChange={set("category")}>
                   <option value="">Auto-detect</option>
-                  {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
+                  {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
                 </select>
               </div>
               <div className="field">
@@ -135,7 +136,7 @@ export default function Purchases({ dataVersion, refresh, notify }) {
             <select className="select" value={category} onChange={(e) => setCategory(e.target.value)}
               aria-label="Filter by category">
               <option value="">All categories</option>
-              {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
+              {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
             <select className="select" value={month} onChange={(e) => setMonth(e.target.value)}
               aria-label="Filter by month">
@@ -174,7 +175,7 @@ export default function Purchases({ dataVersion, refresh, notify }) {
                   </div>
                 </div>
                 <div className={`row-amount num ${r.amount < 0 ? "refund" : ""}`}>{money(r.amount)}</div>
-                <button className="btn ghost small" onClick={() => remove(r)} aria-label={`Delete ${r.merchant}`}>✕</button>
+                <button className="btn ghost small" onClick={() => remove(r)} aria-label={`Delete ${r.merchant}`}><X size={16} aria-hidden="true" /></button>
               </div>
             ))}
           </div>
@@ -284,7 +285,7 @@ function StatementUpload({ cards, refresh, notify, dataVersion }) {
           tabIndex={0}
           onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && inputRef.current?.click()}
         >
-          <div style={{ fontSize: 26 }}>📄</div>
+          <div className="empty-icon small-icon"><FileUp /></div>
           <div><strong>{uploading ? "Reading…" : "Choose a PDF or CSV"}</strong> or drag it here</div>
           <div className="small muted">A PDF statement from your bank, or a CSV export</div>
         </div>

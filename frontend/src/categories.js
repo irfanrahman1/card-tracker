@@ -1,15 +1,15 @@
 // Display info for the spending categories. Order matches the backend.
 // Each category keeps the same color everywhere in the app (colors are set in styles.css).
 export const CATEGORIES = [
-  { id: "food", label: "Food", icon: "🍽️" },
-  { id: "transportation", label: "Transportation", icon: "🚇" },
-  { id: "groceries", label: "Groceries", icon: "🛒" },
-  { id: "shopping", label: "Shopping", icon: "🛍️" },
-  { id: "travel", label: "Travel", icon: "✈️" },
-  { id: "subscriptions", label: "Subscriptions", icon: "🔁" },
-  { id: "utilities", label: "Utilities", icon: "💡" },
-  { id: "fees", label: "Card fees", icon: "🏦" },
-  { id: "other", label: "Other", icon: "📦" },
+  { id: "food", label: "Food" },
+  { id: "transportation", label: "Transportation" },
+  { id: "groceries", label: "Groceries" },
+  { id: "shopping", label: "Shopping" },
+  { id: "travel", label: "Travel" },
+  { id: "subscriptions", label: "Subscriptions" },
+  { id: "utilities", label: "Utilities" },
+  { id: "fees", label: "Card fees" },
+  { id: "other", label: "Other" },
 ];
 
 // Whole dollars, for fees and yearly figures: "$895"

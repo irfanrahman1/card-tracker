@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CreditCard, Sparkles } from "lucide-react";
 import { api } from "../api.js";
 import { CATEGORIES, categoryColor, categoryLabel, money } from "../categories.js";
 
@@ -61,7 +62,7 @@ export default function BestCard({ dataVersion, goTo, notify }) {
             <select id="bc-category" className="select" value={category} onChange={(e) => setCategory(e.target.value)}>
               <option value="">Auto-detect from store</option>
               {CATEGORIES.map((c) => (
-                <option key={c.id} value={c.id}>{c.icon} {c.label}</option>
+                <option key={c.id} value={c.id}>{c.label}</option>
               ))}
             </select>
           </div>
@@ -74,14 +75,14 @@ export default function BestCard({ dataVersion, goTo, notify }) {
       <section className="panel">
         {!result && (
           <div className="empty">
-            <div className="emoji">✨</div>
+            <div className="empty-icon"><Sparkles /></div>
             <p>Enter a store (or pick a category) and an amount to see which card earns the most.</p>
           </div>
         )}
 
         {result && !result.best && (
           <div className="empty">
-            <div className="emoji">💳</div>
+            <div className="empty-icon"><CreditCard /></div>
             <p>You don't have any cards yet. Add one, or load the demo data.</p>
             <button className="btn primary" onClick={() => goTo("cards")}>Add a card</button>
           </div>

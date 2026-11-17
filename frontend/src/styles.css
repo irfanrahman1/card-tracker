@@ -81,11 +81,7 @@ h2 { font-size: 17px; font-weight: 650; }
   padding: 18px 0 12px;
 }
 .brand { display: flex; align-items: center; gap: 10px; }
-.brand-logo {
-  width: 34px; height: 24px; border-radius: 6px;
-  background: linear-gradient(135deg, #2a78d6, #6250d6);
-  box-shadow: inset 0 -6px 0 rgb(255 255 255 / 0.25);
-}
+.brand-logo { display: block; flex-shrink: 0; }
 .brand h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
 .top-actions { display: flex; gap: 8px; }
 
@@ -99,7 +95,8 @@ h2 { font-size: 17px; font-weight: 650; }
   display: flex; align-items: center; gap: 6px;
 }
 .tab.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
-.tab .tab-icon { font-size: 16px; }
+.tab .tab-icon { display: flex; }
+.tab .tab-icon svg { width: 17px; height: 17px; }
 
 .grid { display: grid; gap: 16px; }
 .grid.two { grid-template-columns: 1fr 1fr; }
@@ -257,7 +254,13 @@ h2 { font-size: 17px; font-weight: 650; }
 
 /* ---------- Misc ---------- */
 .empty { text-align: center; padding: 40px 16px; }
-.empty .emoji { font-size: 40px; }
+.empty-icon {
+  width: 52px; height: 52px; margin: 0 auto; border-radius: 50%;
+  display: grid; place-items: center; background: var(--surface-2); color: var(--text-2);
+}
+.empty-icon svg { width: 24px; height: 24px; }
+.empty-icon.small-icon { width: 42px; height: 42px; margin-bottom: 6px; }
+.empty-icon.small-icon svg { width: 20px; height: 20px; }
 .empty p { color: var(--text-2); max-width: 380px; margin: 8px auto 16px; }
 .notice { padding: 10px 12px; border-radius: 10px; font-size: 14px; margin-top: 12px; }
 .notice.good { background: var(--good-bg); color: var(--good); }
@@ -307,7 +310,7 @@ h2 { font-size: 17px; font-weight: 650; }
   }
   .tab { flex-direction: column; gap: 2px; font-size: 11px; padding: 6px 8px; flex: 1; }
   .tab.active { box-shadow: none; background: var(--surface-2); }
-  .tab .tab-icon { font-size: 20px; }
+  .tab .tab-icon svg { width: 21px; height: 21px; }
   .toast { bottom: 84px; }
 }
 
@@ -436,3 +439,9 @@ h2 { font-size: 17px; font-weight: 650; }
 .recent-imports { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 10px; }
 .recent-import { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 0; }
 .recent-import .small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Icons (lucide-react) next to text in buttons and menus */
+.inline-icon { width: 16px; height: 16px; vertical-align: -3px; }
+.menu button svg { width: 16px; height: 16px; vertical-align: -3px; margin-right: 6px; color: var(--text-2); }
+.menu button.danger svg { color: var(--bad); }
+.account-button svg { color: var(--text-2); }

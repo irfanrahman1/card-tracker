@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { Lock, Zap } from "lucide-react";
 import { api } from "../api.js";
+import Logo from "./Logo.jsx";
 
 // The first screen for anyone not logged in: what the app does, how data is
 // protected, and log in / create account / try the demo.
@@ -71,7 +73,7 @@ export default function AuthScreen({ onSignedIn }) {
     <div className="auth">
       <section className="auth-pitch">
         <div className="brand">
-          <div className="brand-logo" aria-hidden="true" />
+          <Logo />
           <h1>Card Tracker</h1>
         </div>
         <h2 className="auth-headline">Stop leaving credit card rewards on the table.</h2>
@@ -84,7 +86,7 @@ export default function AuthScreen({ onSignedIn }) {
           <li><strong>Find a better card setup</strong> for how you actually spend, after fees.</li>
         </ul>
         <div className="auth-privacy">
-          <div className="auth-privacy-title">🔒 Your data stays yours</div>
+          <div className="auth-privacy-title"><Lock className="inline-icon" aria-hidden="true" /> Your data stays yours</div>
           <ul>
             <li>Only your email is needed. No card numbers, ever.</li>
             <li>Passwords are stored as one-way hashes (Argon2), never as text.</li>
@@ -156,7 +158,7 @@ export default function AuthScreen({ onSignedIn }) {
         {(mode === "signup" || mode === "login") && (<>
         <div className="auth-or"><span>or</span></div>
         <button className="btn" style={{ width: "100%" }} disabled={busy} onClick={() => run(api.tryDemo)}>
-          ⚡ Try the demo, no sign-up
+          <Zap className="inline-icon" aria-hidden="true" /> Try the demo, no sign-up
         </button>
         <p className="small muted" style={{ marginBottom: 0, textAlign: "center" }}>
           The demo uses sample data and is deleted after 24 hours.
