@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { CreditCard, Zap } from "lucide-react";
 import { api } from "../api.js";
-import { CATEGORIES, categoryLabel, dollars, money } from "../categories.js";
+import { CATEGORIES, categoryColor, categoryLabel, dollars, money } from "../categories.js";
 
 // Background for each card tile, picked by position so cards look distinct.
 const CARD_THEMES = [
@@ -257,7 +258,7 @@ export default function Cards({ dataVersion, refresh, notify, loadDemo }) {
             <div className="rule-grid">
               {CATEGORIES.filter((c) => c.id !== "fees").map((c) => (
                 <div className="rule-row" key={c.id}>
-                  <label htmlFor={`c-rate-${c.id}`}>{c.icon} {c.label}</label>
+                  <label htmlFor={`c-rate-${c.id}`}><span className="swatch" style={{ background: categoryColor(c.id) }} /> {c.label}</label>
                   <input id={`c-rate-${c.id}`} className="input num" type="number" inputMode="decimal" min="0" step="0.1"
                     placeholder={`${form.base_rate || 0}${points ? "x" : "%"}`} value={form.rates[c.id] ?? ""}
                     onChange={(e) => setForm({ ...form, rates: { ...form.rates, [c.id]: e.target.value } })}
@@ -284,12 +285,12 @@ export default function Cards({ dataVersion, refresh, notify, loadDemo }) {
 
       {cards.length === 0 && !mode ? (
         <div className="panel empty">
-          <div className="emoji">💳</div>
+          <div className="empty-icon"><CreditCard /></div>
           <h2>No cards yet</h2>
           <p>Pick your cards from the list. Their reward rules fill in automatically.</p>
           <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
             <button className="btn primary" onClick={() => setMode("catalog")}>+ Add card</button>
-            <button className="btn" onClick={loadDemo}>⚡ Load demo data</button>
+            <button className="btn" onClick={loadDemo}><Zap className="inline-icon" aria-hidden="true" /> Load demo data</button>
           </div>
         </div>
       ) : (

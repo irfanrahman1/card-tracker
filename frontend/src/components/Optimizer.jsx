@@ -160,7 +160,7 @@ export default function Optimizer({ dataVersion, refresh, notify, goTo }) {
         <div className="spend-grid">
           {OPTIMIZED.map((c) => (
             <div className="field" key={c.id}>
-              <label htmlFor={`sp-${c.id}`}>{c.icon} {categoryLabel(c.id)}</label>
+              <label htmlFor={`sp-${c.id}`}><span className="swatch" style={{ background: categoryColor(c.id) }} /> {categoryLabel(c.id)}</label>
               <input
                 id={`sp-${c.id}`}
                 className="input num"

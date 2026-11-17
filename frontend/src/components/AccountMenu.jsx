@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ChevronDown, KeyRound, LogOut, Trash2, UserX, Zap } from "lucide-react";
 import { api } from "../api.js";
 
 // The account button in the top bar: who's logged in, sample data, password,
@@ -41,18 +42,18 @@ export default function AccountMenu({ user, onLoggedOut, refresh, notify }) {
   return (
     <div className="account" ref={menuRef}>
       <button className="btn account-button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="menu">
-        <span className="avatar" aria-hidden="true">{user.is_demo ? "⚡" : user.email[0].toUpperCase()}</span>
+        <span className="avatar" aria-hidden="true">{user.is_demo ? <Zap size={14} /> : user.email[0].toUpperCase()}</span>
         <span className="account-email">{label}</span>
-        <span aria-hidden="true">▾</span>
+        <ChevronDown size={16} aria-hidden="true" />
       </button>
       {open && (
         <div className="menu" role="menu">
           <div className="menu-head small muted">{label}</div>
-          <button role="menuitem" onClick={() => pick(loadSample)}>⚡ Add sample data</button>
-          {!user.is_demo && <button role="menuitem" onClick={() => pick(() => setDialog("password"))}>🔑 Change password</button>}
-          <button role="menuitem" onClick={() => pick(() => setDialog("clear"))}>🗑️ Delete all my data</button>
-          <button role="menuitem" className="danger" onClick={() => pick(() => setDialog("delete"))}>Delete account</button>
-          <button role="menuitem" onClick={() => pick(logout)}>↩ Log out</button>
+          <button role="menuitem" onClick={() => pick(loadSample)}><Zap aria-hidden="true" /> Add sample data</button>
+          {!user.is_demo && <button role="menuitem" onClick={() => pick(() => setDialog("password"))}><KeyRound aria-hidden="true" /> Change password</button>}
+          <button role="menuitem" onClick={() => pick(() => setDialog("clear"))}><Trash2 aria-hidden="true" /> Delete all my data</button>
+          <button role="menuitem" className="danger" onClick={() => pick(() => setDialog("delete"))}><UserX aria-hidden="true" /> Delete account</button>
+          <button role="menuitem" onClick={() => pick(logout)}><LogOut aria-hidden="true" /> Log out</button>
         </div>
       )}
 

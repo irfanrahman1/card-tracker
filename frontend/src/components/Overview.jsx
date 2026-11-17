@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Zap } from "lucide-react";
 import { api } from "../api.js";
 import { categoryLabel, money, monthLabel } from "../categories.js";
 import CategoryBars from "./CategoryBars.jsx";
@@ -40,10 +41,10 @@ export default function Overview({ dataVersion, refresh, loadDemo, goTo, notify 
       <div className="grid">
         <SetupChecklist summary={summary} goTo={goTo} refresh={refresh} notify={notify} />
         <div className="panel empty">
-          <div className="emoji">⚡</div>
+          <div className="empty-icon"><Zap /></div>
           <h2>Just looking around?</h2>
           <p>Load sample cards and three months of made-up purchases to see how everything works.</p>
-          <button className="btn primary" onClick={loadDemo}>⚡ Load demo data</button>
+          <button className="btn primary" onClick={loadDemo}><Zap className="inline-icon" aria-hidden="true" /> Load demo data</button>
         </div>
       </div>
     );
