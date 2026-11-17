@@ -1,4 +1,4 @@
-// Display info for the five spending categories. Order matches the backend.
+// Display info for the spending categories. Order matches the backend.
 // Each category keeps the same color everywhere in the app (colors are set in styles.css).
 export const CATEGORIES = [
   { id: "food", label: "Food", icon: "🍽️" },
@@ -7,6 +7,7 @@ export const CATEGORIES = [
   { id: "shopping", label: "Shopping", icon: "🛍️" },
   { id: "travel", label: "Travel", icon: "✈️" },
   { id: "subscriptions", label: "Subscriptions", icon: "🔁" },
+  { id: "utilities", label: "Utilities", icon: "💡" },
   { id: "fees", label: "Card fees", icon: "🏦" },
   { id: "other", label: "Other", icon: "📦" },
 ];
