@@ -51,6 +51,8 @@ export const api = {
   updateCard: (id, card) => request(`/api/cards/${id}`, json("PUT", card)),
   deleteCard: (id) => request(`/api/cards/${id}`, { method: "DELETE" }),
   catalog: () => request("/api/cards/catalog"),
+  // For each card: yearly rewards from your purchases, perks, fee, and net value.
+  cardsWorth: () => request("/api/cards/worth"),
   addFromCatalog: (catalogId, choice) =>
     request(`/api/cards/from-catalog/${catalogId}${choice ? `?choice=${choice}` : ""}`, { method: "POST" }),
 

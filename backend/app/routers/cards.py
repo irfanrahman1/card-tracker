@@ -1,4 +1,6 @@
 """Endpoints for credit cards and their reward rules. Every route is for the logged-in user only."""
+from datetime import date, timedelta
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -7,6 +9,7 @@ from .. import models, schemas
 from ..auth import current_user
 from ..catalog import catalog_cards, display_name, find_card
 from ..database import get_db
+from ..recommendation import point_value, rate_for
 
 router = APIRouter(prefix="/api/cards", tags=["cards"])
 
@@ -87,6 +90,53 @@ def add_from_catalog(catalog_id: str, choice: str | None = None, db: Session = D
 @router.get("", response_model=list[schemas.CardOut])
 def list_cards(db: Session = Depends(get_db), user: models.User = Depends(current_user)):
     return db.scalars(select(models.Card).where(models.Card.user_id == user.id).order_by(models.Card.name)).all()
+
+
+@router.get("/worth")
+def cards_worth(db: Session = Depends(get_db), user: models.User = Depends(current_user)):
+    """Is each card worth its annual fee?
+
+    Adds up the rewards from your purchases on each card over the last 12 months,
+    plus the perks you said you use, minus the annual fee. If a card has less than
+    a year of purchases, the year is estimated from the months it does have.
+    """
+    since = date.today() - timedelta(days=365)
+    cards = db.scalars(select(models.Card).where(models.Card.user_id == user.id)).all()
+
+    results = []
+    for card in cards:
+        purchases = db.scalars(select(models.Transaction).where(
+            models.Transaction.user_id == user.id,
+            models.Transaction.card_id == card.id,
+            models.Transaction.date >= since,
+        )).all()
+
+        rewards = 0.0
+        for t in purchases:
+            if t.category == "fees":
+                continue  # card fees don't earn rewards
+            rate, _ = rate_for(card, t.category)
+            rewards += t.amount * rate * point_value(card) / 100
+
+        # how many months of purchases we have, from the first to the last one (1 to 12)
+        months = 0
+        if purchases:
+            first = min(t.date for t in purchases)
+            last = max(t.date for t in purchases)
+            months = (last.year - first.year) * 12 + (last.month - first.month) + 1
+            months = min(months, 12)
+
+        yearly_rewards = rewards / months * 12 if months else 0.0
+        net = yearly_rewards + card.credits_value - card.annual_fee
+        results.append({
+            "card_id": card.id,
+            "months": months,
+            "yearly_rewards": round(yearly_rewards, 2),
+            "credits": card.credits_value,
+            "annual_fee": card.annual_fee,
+            "net": round(net, 2),
+        })
+    return results
 
 
 @router.post("", response_model=schemas.CardOut, status_code=201)
