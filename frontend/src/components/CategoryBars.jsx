@@ -6,12 +6,16 @@ import { CATEGORIES, categoryColor, money, prettyMerchant, shortDate } from "../
 // amount and share, so the color is never the only way to read it.
 // Tap a category to see its stores; tap a store to see each purchase.
 // A category can be negative if refunds/credits outweigh spending; its bar is empty.
+// Categories with nothing this month are listed in one line at the bottom instead.
 export default function CategoryBars({ byCategory, total, month, card, dataVersion }) {
   const [open, setOpen] = useState(null); // category id that's expanded
   const max = Math.max(...Object.values(byCategory), 0);
+  const withSpending = CATEGORIES.filter((c) => (byCategory[c.id] ?? 0) !== 0);
+  const empty = CATEGORIES.filter((c) => (byCategory[c.id] ?? 0) === 0);
   return (
     <div className="cat-rows">
-      {CATEGORIES.map((c) => {
+      {withSpending.length === 0 && <p className="muted small">No spending this month.</p>}
+      {withSpending.map((c) => {
         const value = byCategory[c.id] ?? 0;
         const pct = total > 0 && value > 0 ? Math.round((value / total) * 100) : 0;
         const isOpen = open === c.id;
@@ -21,7 +25,6 @@ export default function CategoryBars({ byCategory, total, month, card, dataVersi
               className="cat-row"
               onClick={() => setOpen(isOpen ? null : c.id)}
               aria-expanded={isOpen}
-              disabled={value === 0}
               title={`${c.label}: ${money(value)} (${pct}% of month)`}
             >
               <div className="cat-name">
@@ -37,13 +40,16 @@ export default function CategoryBars({ byCategory, total, month, card, dataVersi
               <div className="cat-amount num">
                 {money(value)}
                 <span className="cat-pct">{pct}%</span>
-                <span className="chevron" aria-hidden="true">{value !== 0 ? (isOpen ? "▾" : "▸") : ""}</span>
+                <span className="chevron" aria-hidden="true">{isOpen ? "▾" : "▸"}</span>
               </div>
             </button>
             {isOpen && <CategoryDetail month={month} category={c.id} card={card} dataVersion={dataVersion} />}
           </div>
         );
       })}
+      {withSpending.length > 0 && empty.length > 0 && (
+        <p className="muted small cat-empty">No spending on {empty.map((c) => c.label).join(", ")}</p>
+      )}
     </div>
   );
 }
