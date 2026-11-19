@@ -445,3 +445,7 @@ h2 { font-size: 17px; font-weight: 650; }
 .menu button svg { width: 16px; height: 16px; vertical-align: -3px; margin-right: 6px; color: var(--text-2); }
 .menu button.danger svg { color: var(--bad); }
 .account-button svg { color: var(--text-2); }
+
+/* "Is this card worth its fee?" box on each card */
+.cc-worth { margin-top: 12px; padding: 8px 10px; border-radius: 8px; background: rgb(0 0 0 / 0.18); font-size: 13px; line-height: 1.45; }
+.cc-verdict { opacity: 0.85; font-size: 12px; }

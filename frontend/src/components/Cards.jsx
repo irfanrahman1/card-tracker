@@ -42,6 +42,15 @@ export default function Cards({ dataVersion, refresh, notify, loadDemo }) {
   const [choosing, setChoosing] = useState(null); // catalog card whose bonus category is being picked
   const [choice, setChoice] = useState("");
 
+  const [worth, setWorth] = useState({}); // card id -> is it worth its fee? (see CardWorth below)
+  useEffect(() => {
+    api.cardsWorth().then((list) => {
+      const byCard = {};
+      for (const w of list) byCard[w.card_id] = w;
+      setWorth(byCard);
+    }).catch(() => {});
+  }, [dataVersion]);
+
   useEffect(() => {
     api.listCards().then(setCards).catch((err) => notify(err.message, "error"));
   }, [dataVersion, notify]);
@@ -322,6 +331,7 @@ export default function Cards({ dataVersion, refresh, notify, loadDemo }) {
                   <span className="cc-rate">{card.base_rate}{unit(card)} everything else</span>
                 </div>
               </div>
+              <CardWorth info={worth[card.id]} />
               <div className="cc-actions">
                 <button className="btn small" onClick={() => startEdit(card)}>Edit</button>
                 <button className="btn small" onClick={() => remove(card)}>Delete</button>
@@ -330,6 +340,28 @@ export default function Cards({ dataVersion, refresh, notify, loadDemo }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// "Is this card worth its fee?" line on each card: a year of rewards from your
+// purchases on it, plus perks you use, minus the annual fee.
+function CardWorth({ info }) {
+  if (!info) return null;
+  if (info.months === 0) {
+    return <div className="cc-worth">No purchases on this card in the last year yet.</div>;
+  }
+  const estimate = info.months < 12 ? ` · estimated from ${info.months} month${info.months === 1 ? "" : "s"}` : "";
+  if (!info.annual_fee) {
+    return <div className="cc-worth">Earns about <strong>{dollars(info.yearly_rewards)}/yr</strong>{estimate}</div>;
+  }
+  return (
+    <div className="cc-worth">
+      <div>
+        {dollars(info.yearly_rewards)} rewards{info.credits ? ` + ${dollars(info.credits)} perks` : ""} − {dollars(info.annual_fee)} fee
+        {" = "}<strong>{info.net >= 0 ? "+" : "−"}{dollars(Math.abs(info.net))}/yr</strong>
+      </div>
+      <div className="cc-verdict">{info.net >= 0 ? "Worth its fee" : "Costs more than it earns"}{estimate}</div>
     </div>
   );
 }
