@@ -1,5 +1,8 @@
 """Endpoints for purchases. Every route is for the logged-in user only."""
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+import csv
+import io
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -39,6 +42,41 @@ def list_transactions(
     if month:
         rows = [t for t in rows if t.date.strftime("%Y-%m") == month]
     return rows
+
+
+def safe_for_spreadsheets(text: str) -> str:
+    """Excel runs a cell that starts with = + - or @ as a formula ("CSV injection"),
+    so a store named "=HYPERLINK(...)" could do something when you open the file.
+    A ' in front makes Excel show it as plain text."""
+    if text and text[0] in "=+-@\t\r":
+        return "'" + text
+    return text
+
+
+@router.get("/export")
+def export_csv(db: Session = Depends(get_db), user: models.User = Depends(current_user)):
+    """Download all your purchases as a CSV file. Card Tracker can import it again."""
+    rows = db.scalars(select(models.Transaction).where(models.Transaction.user_id == user.id)
+                      .order_by(models.Transaction.date, models.Transaction.id)).all()
+    card_names = {c.id: c.name for c in db.scalars(select(models.Card).where(models.Card.user_id == user.id))}
+
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow(["Date", "Merchant", "Amount", "Category", "Card", "Description"])
+    for t in rows:
+        writer.writerow([
+            t.date.isoformat(),
+            safe_for_spreadsheets(t.merchant),
+            f"{t.amount:.2f}",
+            t.category,
+            safe_for_spreadsheets(card_names.get(t.card_id, "")),
+            safe_for_spreadsheets(t.description),
+        ])
+    return Response(
+        content=out.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="card-tracker-purchases.csv"'},
+    )
 
 
 @router.post("", response_model=schemas.TransactionOut, status_code=201)

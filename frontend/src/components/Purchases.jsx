@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { FileUp, X } from "lucide-react";
+import { Download, FileUp, X } from "lucide-react";
 import { api } from "../api.js";
 import { CATEGORIES, categoryColor, categoryLabel, money, monthLabel, prettyMerchant, today } from "../categories.js";
 
@@ -133,6 +133,10 @@ export default function Purchases({ dataVersion, refresh, notify }) {
             Purchases <span className="muted small num">· {rows.length} · {money(total)}</span>
           </h2>
           <div className="filters">
+            {/* a normal link: the browser downloads the file and sends your login cookie */}
+            <a className="btn export-link" href="/api/transactions/export" download aria-label="Download CSV">
+              <Download className="inline-icon" aria-hidden="true" /> <span className="btn-label">Download CSV</span>
+            </a>
             <select className="select" value={category} onChange={(e) => setCategory(e.target.value)}
               aria-label="Filter by category">
               <option value="">All categories</option>
