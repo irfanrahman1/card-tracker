@@ -452,3 +452,9 @@ h2 { font-size: 17px; font-weight: 650; }
 
 /* "No spending on ..." line under the category list */
 .cat-empty { margin: 8px 8px 0; }
+
+/* "Download CSV" is a link that looks like a button; on phones it shrinks to its icon */
+a.btn { text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+@media (max-width: 760px) {
+  .export-link .btn-label { display: none; }
+}
